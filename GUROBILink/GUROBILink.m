@@ -7,6 +7,7 @@ $GUROBILinkDirectory::usage = "$GUROBILinkDirectory gives the location of the GU
 LoadGUROBILink::usage  = "LoadGUROBILink[] loads the GUROBILink library."
 GUROBISetVariableTypesAndObjectiveVector::usage = "GUROBISetVariableTypesAndObjectiveVector[data, vartypes, objvector], vartypes is a string with \"C\" at positions of continuous variables and \"I\" for integer variables."
 GUROBISetVariableTypesAndBoundsAndObjectiveVector::usage = "GUROBISetVariableTypesAndBoundsAndObjectiveVector[data, vartypes, lowerbounds, upperbounds, objvector], vartypes is a string with \"C\" at positions of continuous variables and \"I\" for integer variables."
+GUROBIAddQuadraticObjectiveMatrix::usage = "GUROBIAddQuadraticObjectiveMatrix[data, saQmat]"
 GUROBIAddLinearConstraintIndices::usage = "GUROBIAddLinearConstraintIndices[data, indices, values, sense, rhs], where sense is \">\", \"<\" or \"=\"."
 GUROBIAddLinearConstraint::usage = "GUROBIAddLinearConstraint[data, a, sense, b] -> a.x sense b, where sense is \">\", \"<\" or \"=\"."
 GUROBIAddLinearConstraints::usage = "GUROBIAddLinearConstraints[data, mat, sense, rhs], where sense is \">\", \"<\" or \"=\"."
@@ -61,6 +62,7 @@ $GUROBIInfinity = 1.*10^30;
 (*
 GUROBISetVariableTypesAndObjectiveVector[data, vartypes, objvector]
 GUROBISetVariableTypesAndBoundsAndObjectiveVector[data, vartypes, lowerbounds, upperbounds, objvector]
+GUROBIAddQuadraticObjectiveMatrix[data, Qmat]
 GUROBIAddLinearConstraint[data, vec, sense, rhs]
 GUROBIAddLinearConstraintIndices[data, indices, values, sense, rhs]
 GUROBIAddLinearConstraints[data, mat, sense, rhs]
@@ -81,7 +83,7 @@ Block[{$LibraryPath = $targetDir},
 	Map[LibraryLoad, $GUROBILibrariesToPreload];
 	GUROBISetVariableTypesAndObjectiveVector0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetVariableTypesAndObjectiveVector", {Integer, UTF8String, {Real, 1}}, Integer];
 	GUROBISetVariableTypesAndBoundsAndObjectiveVector0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetVariableTypesAndBoundsAndObjectiveVector", {Integer, UTF8String, {Real, 1}, {Real, 1}, {Real, 1}}, Integer];
-	GUROBISetVariableTypesAndZeroLowerBoundsForLinIneqDualVarsAndObjectiveVector0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetVariableTypesAndZeroLowerBoundsForLinIneqDualVarsAndObjectiveVector", {Integer, UTF8String, Integer, Integer, {Real, 1}}, Integer];
+	GUROBIAddQuadraticObjectiveMatrix0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddQuadraticObjectiveMatrix", {Integer, LibraryDataType[SparseArray, Real, 2]}, Integer];
 	GUROBIAddLinearConstraint0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddLinearConstraint", {Integer, {Integer, 1}, {Real, 1}, UTF8String, Real}, Integer];
 	GUROBIAddLinearConstraint1 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddLinearConstraint1", {Integer, LibraryDataType[SparseArray, Real, 1], UTF8String, Real}, Integer];
 	GUROBIAddLinearConstraints0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddLinearConstraints", {Integer, LibraryDataType[SparseArray, Real, 2], UTF8String, {Real, 1}}, Integer];
@@ -154,10 +156,9 @@ Module[{},
 	GUROBISetVariableTypesAndBoundsAndObjectiveVectort0[id, vartypes, lb, ub, objvector]
 ];
 
-GUROBISetVariableTypesAndZeroLowerBoundsForLinIneqDualVarsAndObjectiveVector[GUROBIData[id_]?(testGUROBIData[GUROBISetVariableTypesAndZeroLowerBoundsForLinIneqDualVarsAndObjectiveVector]), vartypes_, nleq_, nlin_, objvector_]:=
+GUROBIAddQuadraticObjectiveMatrix[GUROBIData[id_]?(testGUROBIData[GUROBIAddQuadraticObjectiveMatrix]), Qmat_SparseArray]:=
 Module[{},
-	dPrint[5, "Setting ", nlin, " lower variable bounds , from ", nleq, " to ", nleq+nlin-1, ", to zero."];
-	GUROBISetVariableTypesAndZeroLowerBoundsForLinIneqDualVarsAndObjectiveVector0[id, vartypes, nleq, nlin, objvector];
+	GUROBIAddQuadraticObjectiveMatrix0[id, Qmat]
 ];
 
 GUROBIAddLinearConstraintIndices[GUROBIData[id_]?(testGUROBIData[GUROBIDataDelete]), indices_, values_, sense_, rhs_]:=
@@ -276,7 +277,8 @@ GUROBISlack[GUROBIData[id_]?(testGUROBIData[GUROBISlack])] := GUROBISlack0[id];
 
 Optimization`ConvexSolvers`RegisterConvexMethod["GUROBI1", 
 	Association[
-		"SolveFunction" -> GUROBISolve1, 
+		"SolveFunction" -> GUROBISolve1,
+		"ObjectiveSupport" -> "Quadratic",
   		"ConicConstraintSupport" -> Thread[{"EqualityConstraint", "NonNegativeCone", "NormCone"}->"Affine"],
 		"MixedIntegerSupport"->True
   	]
@@ -284,7 +286,8 @@ Optimization`ConvexSolvers`RegisterConvexMethod["GUROBI1",
 
 Optimization`ConvexSolvers`RegisterConvexMethod["GUROBI2", 
 	Association[
-		"SolveFunction" -> GUROBISolve2, 
+		"SolveFunction" -> GUROBISolve2,
+		"ObjectiveSupport" -> "Quadratic",
   		"ConicConstraintSupport" -> {"EqualityConstraint"->"Affine", "NonNegativeCone"->"Affine", "NormCone"->"Membership"},
  		"MixedIntegerSupport"->True
  	]
@@ -297,19 +300,26 @@ Optimization`ConvexSolvers`RegisterConvexMethod["GUROBI",
 ]
 
 GUROBISolve1[problemData_, pmopts___] :=
-Module[{t0, data, objvector, nvars, affine, coneSpecifications, lpos, intvars, vartypes},
+Module[{t0, data, objvec, objmat, nvars, affine, coneSpecifications, lpos, intvars, vartypes},
 	(* only for fully suppoted by GUROBI condstraints *)
 	t0 = AbsoluteTime[];
 
 	dPrint[1, "In GUROBISolve"];
 	dPrint[3, "pmopts: ", pmopts];
+Print[InputForm[problemData]];
+
 	data = GUROBIDataCreate[];
 	
-	objvector = problemData["ObjectiveVector"];
-	nvars = Length[objvector];
+	objvec = problemData["ObjectiveVector"];
+	nvars = Length[objvec];
+	objmat = problemData["ObjectiveMatrix"];
 	intvars = problemData["IntegerVariableColumns"];
-	vartypes = StringJoin[Table[If[MemberQ[intvars, integer], "I", "C"], {i, nvars}]];
-	GUROBISetVariableTypesAndObjectiveVector[data, vartypes, objvector];
+	vartypes = StringJoin[Table[If[MemberQ[intvars, i], "I", "C"], {i, nvars}]];
+Print["nvars: ", nvars];
+Print["intvars: ", intvars];
+Print["vartypes: ", vartypes];
+	GUROBISetVariableTypesAndObjectiveVector[data, vartypes, objvec];
+	GUROBIAddQuadraticObjectiveMatrix[data, SparseArray[objmat]];
 	
 	affine = problemData["ConicConstraintAffineLists"];
 	coneSpecifications = problemData["ConicConstraintConeSpecifications"];
@@ -362,7 +372,7 @@ GUROBI1Data[data_, _]["DualMaximizer"] := Missing["NotAvailable"];
 
 
 GUROBISolve2[problemData_, pmopts___] :=
-Module[{a, b, objvector, data, nvars, status, lpos, nextra, norig, integerColumns, t0, 
+Module[{a, b, objvec, data, nvars, status, lpos, nextra, norig, integerColumns, t0, 
 	affine, coneSpecifications, coneVariableIndexes, vartypes},
 	(* corresponds to MOSEKPrimal *)
 	t0 = AbsoluteTime[];
@@ -371,8 +381,9 @@ Module[{a, b, objvector, data, nvars, status, lpos, nextra, norig, integerColumn
 	dPrint[3, "pmopts: ", pmopts];
 	data = GUROBIDataCreate[];
 	
-	objvector = problemData["ObjectiveVector"];
-	nvars = Length[objvector];
+	objvec = problemData["ObjectiveVector"];
+	nvars = Length[objvec];
+	objmat = problemData["ObjectiveMatrix"];
 	nextra = Lookup[problemData, "ExtraColumns", 0];
 	norig = nvars - nextra;
 
@@ -380,7 +391,7 @@ Module[{a, b, objvector, data, nvars, status, lpos, nextra, norig, integerColumn
 	coneSpecifications = problemData["ConicConstraintConeSpecifications"];
  	coneVariableIndexes = problemData["ConeVariableColumns"];
 	coneLengths = Map[Length, affine];
-Print["objvector: ", objvector];
+Print["objvec: ", objvec];
 Print["affine: ", affine];
 Print["coneSpecifications: ", coneSpecifications];
 	If[MatchQ[coneVariableIndexes, _Missing], coneVariableIndexes = ConstantArray[None, Length[coneSpecifications]]];
@@ -388,9 +399,13 @@ Print["coneSpecifications: ", coneSpecifications];
 Print["coneVariableIndexes: ", coneVariableIndexes];
 
 	integerColumns = problemData["IntegerVariableColumns"];
+
 	vartypes = StringJoin[Table[If[MemberQ[integerColumns, i], "I", "C"], {i, nvars}]];
+Print["vartypes: ", vartypes];
+
 	
-	GUROBISetVariableTypesAndObjectiveVector[data, vartypes, objvector];
+	GUROBISetVariableTypesAndObjectiveVector[data, vartypes, objvec];
+	GUROBIAddQuadraticObjectiveMatrix[data, SparseArray[objmat]];
 
 	(* add variable bounds *)
 	(*pleq = Flatten[Position[coneSpecifications, {"EqualityConstraint", _}, {1}]];
