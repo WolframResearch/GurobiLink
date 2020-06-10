@@ -29,6 +29,32 @@ EXTERN_C DLLEXPORT void WolframLibrary_uninitialize(WolframLibraryData libData) 
 	return;
 }
 
+/************************************************************************/
+/*                GUROBIData_CheckLicense                               */
+/*                                                                      */
+/*                GUROBICheckLicense[data]                              */
+/************************************************************************/
+
+EXTERN_C DLLEXPORT int GUROBIData_CheckLicense(WolframLibraryData libData, mint Argc, MArgument *Args, MArgument Res)
+{
+	mint dataID, nolicense = 0;
+	GUROBIData GUROBIdata;
+
+	if (Argc != 1) {
+		return LIBRARY_FUNCTION_ERROR;
+	}
+	dataID = MArgument_getInteger(Args[0]);
+	GUROBIdata = GUROBIDataMap_get(dataID);
+
+	/* check error from GRBstartenv in GUROBIData_new*/
+	if (GUROBIdata->error == 10009) nolicense = 1;
+
+	/* load return values */
+	MArgument_setInteger(Res, nolicense);
+
+	return LIBRARY_NO_ERROR;
+}
+
 
 /******************************************************************************/
 /*             GUROBIData_SetVariableTypesAndObjectiveVector                  */
@@ -176,7 +202,7 @@ SpArrayData SpArrayData_fromMSparseArray(WolframLibraryData libData, MSparseArra
 
 EXTERN_C DLLEXPORT int GUROBIData_AddQuadraticObjectiveMatrix(WolframLibraryData libData, mint Argc, MArgument *Args, MArgument Res)
 {
-	int error, numquadnz, *quadrow, *quadcol;
+	int error=0, numquadnz, *quadrow, *quadcol;
 	char *senseString = 0;
 	double *quadval;
 	mint i, dataID;
@@ -194,21 +220,25 @@ EXTERN_C DLLEXPORT int GUROBIData_AddQuadraticObjectiveMatrix(WolframLibraryData
 	QmatSA = MArgument_getMSparseArray(Args[1]);
 	Qmat = SpArrayData_fromMSparseArray(libData, QmatSA, &TQ);
 	numquadnz = (int)Qmat.nentries;
-	quadrow = (int *)malloc(numquadnz * sizeof(int));
-	quadcol = (int *)malloc(numquadnz * sizeof(int));
-	quadval = (double *)malloc(numquadnz * sizeof(double));
-	for (i = 0; i < numquadnz; i++) {
-		quadrow[i] = (int)Qmat.explicitPositions[2 * i] - 1;
-		quadcol[i] = (int)Qmat.explicitPositions[2 * i + 1] - 1;
-		quadval[i] = Qmat.explicitValues[i];
+
+	if (numquadnz > 0) {
+		quadrow = (int *)malloc(numquadnz * sizeof(int));
+		quadcol = (int *)malloc(numquadnz * sizeof(int));
+		quadval = (double *)malloc(numquadnz * sizeof(double));
+		for (i = 0; i < numquadnz; i++) {
+			quadrow[i] = (int)Qmat.explicitPositions[2 * i] - 1;
+			quadcol[i] = (int)Qmat.explicitPositions[2 * i + 1] - 1;
+			quadval[i] = Qmat.explicitValues[i];
+		}
+
+		error = GRBaddqpterms(GUROBIdata->model, numquadnz, quadrow, quadcol, quadval);
+
+		free(quadrow);
+		free(quadcol);
+		free(quadval);
 	}
 
-	error = GRBaddqpterms(GUROBIdata->model, numquadnz, quadrow, quadcol, quadval);
-
 	libData->MTensor_free(TQ);
-	free(quadrow);
-	free(quadcol);
-	free(quadval);
 
 	/* load return values */
 	MArgument_setInteger(Res, (mint)error);
@@ -540,7 +570,7 @@ EXTERN_C DLLEXPORT int GUROBIData_AddQuadraticConstraint1(WolframLibraryData lib
 
 	rhs = MArgument_getReal(Args[4]);
 
-	// TODO: Update GUROBIdata->ncons?
+	// Update GUROBIdata->ncons?
 
 	// Add constraint coefficients indices and values, equal/ineq sign and right hand side
 	// example: 2 x0^2 + x0 x1 + x1^2 + 2 x1 + x2 <= 1
@@ -572,6 +602,106 @@ EXTERN_C DLLEXPORT int GUROBIData_AddQuadraticConstraint1(WolframLibraryData lib
 }
 
 /************************************************************************/
+/*                GUROBIData_SetNumberOfConstraints                     */
+/*                                                                      */
+/*            GUROBISetNumberOfCOnstraints[data, ncons]                 */
+/************************************************************************/
+
+EXTERN_C DLLEXPORT int GUROBIData_SetNumberOfConstraints(WolframLibraryData libData, mint Argc, MArgument *Args, MArgument Res)
+{
+	int error = -1;
+	mint dataID, ncons;
+	GUROBIData GUROBIdata;
+
+	if (Argc != 2) {
+		return LIBRARY_FUNCTION_ERROR;
+	}
+	dataID = MArgument_getInteger(Args[0]);
+	GUROBIdata = GUROBIDataMap_get(dataID);
+
+	ncons = MArgument_getInteger(Args[1]);
+
+	GUROBIdata->ncons = ncons;
+
+	/* load return values */
+	MArgument_setInteger(Res, (mint)0);
+
+	return LIBRARY_NO_ERROR;
+}
+
+/************************************************************************/
+/*                GUROBIData_SetParameters                              */
+/*                                                                      */
+/*        GUROBISetParameters[data, maxit, tol, nonconvex]              */
+/************************************************************************/
+
+EXTERN_C DLLEXPORT int GUROBIData_SetParameters(WolframLibraryData libData, mint Argc, MArgument *Args, MArgument Res)
+{
+	int error, maxit, nonconvex;
+	mint dataID;
+	double tol;
+	GUROBIData GUROBIdata;
+
+	if (Argc != 4) {
+		return LIBRARY_FUNCTION_ERROR;
+	}
+	dataID = MArgument_getInteger(Args[0]);
+	GUROBIdata = GUROBIDataMap_get(dataID);
+
+	maxit = (int)MArgument_getInteger(Args[1]);
+	error = GRBsetintparam(GRBgetenv(GUROBIdata->model), "BarIterLimit", maxit);
+	if (error) return LIBRARY_FUNCTION_ERROR;
+
+	tol = MArgument_getReal(Args[2]);
+	if (tol > 1) { tol = 1.;}
+	error = GRBsetdblparam(GRBgetenv(GUROBIdata->model), "BarConvTol", tol/100);
+	if (error) return LIBRARY_FUNCTION_ERROR;
+	error = GRBsetdblparam(GRBgetenv(GUROBIdata->model), "BarQCPConvTol", tol);
+	if (error) return LIBRARY_FUNCTION_ERROR;
+
+	nonconvex = (int)MArgument_getInteger(Args[3]);
+	error = GRBsetintparam(GRBgetenv(GUROBIdata->model), "NonConvex", nonconvex);
+	if (error) return LIBRARY_FUNCTION_ERROR;
+
+	/* load return values */
+	MArgument_setInteger(Res, 0);
+
+	return LIBRARY_NO_ERROR;
+}
+
+/************************************************************************/
+/*                GUROBIData_SetStartingPoint                           */
+/*                                                                      */
+/*             GUROBISetStartingPoint[data, initpt]                     */
+/************************************************************************/
+
+EXTERN_C DLLEXPORT int GUROBIData_SetStartingPoint(WolframLibraryData libData, mint Argc, MArgument *Args, MArgument Res)
+{
+	int error;
+	mint dataID;
+	double *start;
+	MTensor pT;
+	GUROBIData GUROBIdata;
+
+	if (Argc != 2) {
+		return LIBRARY_FUNCTION_ERROR;
+	}
+	dataID = MArgument_getInteger(Args[0]);
+	GUROBIdata = GUROBIDataMap_get(dataID);
+
+	pT = MArgument_getMTensor(Args[1]);
+	start = libData->MTensor_getRealData(pT);
+
+	error = GRBsetdblattrarray(GUROBIdata->model, "Start", 0, (int)(GUROBIdata->nvars), start);
+
+	/* load return values */
+	MArgument_setInteger(Res, error);
+
+	return LIBRARY_NO_ERROR;
+}
+
+
+/************************************************************************/
 /*                GUROBIData_OptimizeModel                              */
 /*                                                                      */
 /*                  GUROBIOptimize[data]                                */
@@ -579,7 +709,7 @@ EXTERN_C DLLEXPORT int GUROBIData_AddQuadraticConstraint1(WolframLibraryData lib
 
 EXTERN_C DLLEXPORT int GUROBIData_OptimizeModel(WolframLibraryData libData, mint Argc, MArgument *Args, MArgument Res)
 {
-	int error = -1;
+	int error;
 	mint dataID;
 	GUROBIData GUROBIdata;
 
@@ -588,8 +718,6 @@ EXTERN_C DLLEXPORT int GUROBIData_OptimizeModel(WolframLibraryData libData, mint
 	}
 	dataID = MArgument_getInteger(Args[0]);
 	GUROBIdata = GUROBIDataMap_get(dataID);
-
-	// error = GRBsetintparam(GRBgetenv(GUROBIdata->model), "NonConvex", 2);
 
 	/* optimize model */
 	error = GRBoptimize(GUROBIdata->model);
@@ -646,12 +774,12 @@ EXTERN_C DLLEXPORT int GUROBIData_GetSolution(WolframLibraryData libData, mint A
 */
 
 /*****************************************************************/
-/*                GUROBIData_GetSolutionStatus                   */
+/*                GUROBIData_GetStatusValue                      */
 /*                                                               */
-/*                 GUROBISolutionStatus[data]                    */
+/*                 GUROBIStatusValue[data]                       */
 /*****************************************************************/
 
-EXTERN_C DLLEXPORT int GUROBIData_GetSolutionStatus(WolframLibraryData libData, mint Argc, MArgument *Args, MArgument Res)
+EXTERN_C DLLEXPORT int GUROBIData_GetStatusValue(WolframLibraryData libData, mint Argc, MArgument *Args, MArgument Res)
 {
 	int error;
 	mint dataID;
@@ -764,7 +892,7 @@ EXTERN_C DLLEXPORT int GUROBIData_Getx(WolframLibraryData libData, mint Argc, MA
 
 EXTERN_C DLLEXPORT int GUROBIData_GetSlack(WolframLibraryData libData, mint Argc, MArgument *Args, MArgument Res)
 {
-	int error;
+	int error, ncons, nqcons, allcons;
 	mint dataID;
 	GUROBIData GUROBIdata;
 	double *slack=0;
@@ -776,13 +904,17 @@ EXTERN_C DLLEXPORT int GUROBIData_GetSlack(WolframLibraryData libData, mint Argc
 	dataID = MArgument_getInteger(Args[0]);
 	GUROBIdata = GUROBIDataMap_get(dataID);
 
-	// whats the length? ncons? fix GUROBIdata->ncons and the malloc
+	error = GRBgetintattr(GUROBIdata->model, "NumConstrs", &ncons);
+	error = GRBgetintattr(GUROBIdata->model, "NumQConstrs", &nqcons);
+	allcons = ncons + nqcons;
+
+	//It is not clear what length to expect for the slack and in any case it doesn't seem to work for quadratic constraints
 
 	/* get the minimizer vector */
-	slack = (double*)malloc(sizeof(double)*(GUROBIdata->nvars));
-	error = GRBgetdblattrarray(GUROBIdata->model, "Slack", 0, (int)(GUROBIdata->nvars), slack);
+	slack = (double*)malloc(sizeof(double)*(allcons));
+	error = GRBgetdblattrarray(GUROBIdata->model, "Slack", 0, allcons, slack);
 
-	setTensor(slack, GUROBIdata->ncons, slackT);
+	setTensor(slack, allcons, slackT);
 
 	/* load return values */
 	MArgument_setMTensor(Res, slackT);

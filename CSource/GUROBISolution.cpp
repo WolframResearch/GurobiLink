@@ -23,9 +23,11 @@ GUROBIData GUROBIData_new(void)
 	GUROBIdata->error = GRBemptyenv(&(GUROBIdata->env));
 	if (!(GUROBIdata->error)) {
 		/* 0 variables, no problem info yet */
-		GUROBIdata->error = GRBsetstrparam(GUROBIdata->env, "LogFile", "mip1.log");
+		// GUROBIdata->error = GRBsetstrparam(GUROBIdata->env, "LogFile", "Mo.log");
 		GUROBIdata->error = GRBstartenv(GUROBIdata->env);
-		GUROBIdata->error = GRBnewmodel(GUROBIdata->env, &(GUROBIdata->model), "mip1", 0, NULL, NULL, NULL, NULL, NULL);
+		if (!(GUROBIdata->error)) {
+			GUROBIdata->error = GRBnewmodel(GUROBIdata->env, &(GUROBIdata->model), "Mo", 0, NULL, NULL, NULL, NULL, NULL);
+		}
 	}
 	return GUROBIdata;
 }

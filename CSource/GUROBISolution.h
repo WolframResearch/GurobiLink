@@ -12,7 +12,6 @@
 typedef struct GUROBIData_struct {
 	GRBenv *env;
 	GRBmodel *model;
-
 	mint nvars;
 	mint ncons;
 	int optstatus;
