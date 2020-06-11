@@ -63,7 +63,6 @@ $GUROBILibrariesToPreload = Switch[$SystemID,
 $GUROBIPrintLevel = 0;
 dPrint = Optimization`Debug`OptimizationDebugPrint;
 (* Set print level 5 with Optimization`Debug`SetPrintLevel[5] *)
-GUROBILink`Private`dPrint = Print;
 (*GUROBILink`Private`pPrint = Print;*)
 
 needInitialization = True;
@@ -164,7 +163,6 @@ Module[{},
 	dPrint[1, "Checking for GUROBI license..."];
 	res = GUROBICheckLicense0[id];
 	If[res === 0,
-		dPrint[1, "... found license."];
 		True
 		, (* else *)
 		Message[GUROBILink::license];
@@ -175,7 +173,6 @@ Module[{},
 GUROBILink::license = "Cannot find a valid GUROBI license for version 9.0 or greater." 
 
 (* Functions to set up the problem *)
-
 
 GUROBISetVariableTypesAndObjectiveVector[GUROBIData[id_]?(testGUROBIData[GUROBISetVariableTypesAndObjectiveVector]), vartypes_, objvector_]:=
 Module[{},
@@ -188,8 +185,10 @@ Module[{},
 ];
 
 GUROBIAddQuadraticObjectiveMatrix[GUROBIData[id_]?(testGUROBIData[GUROBIAddQuadraticObjectiveMatrix]), Qmat_SparseArray]:=
-Module[{},
-	GUROBIAddQuadraticObjectiveMatrix0[id, Qmat]
+Module[{QGmat = Qmat/2},
+	(*the GUROBI Q matrix absorbs the 1/2 coeefficient*)
+	dPrint[5, "Adding quadratic objective matrix ", Normal[QGmat]];
+	GUROBIAddQuadraticObjectiveMatrix0[id, QGmat]
 ];
 
 GUROBIAddLinearConstraintIndices[GUROBIData[id_]?(testGUROBIData[GUROBIDataDelete]), indices_, values_, sense_, rhs_]:=
@@ -208,7 +207,6 @@ Module[{},
 	GUROBIAddLinearConstraints0[id, mat, sense, rhs]
 ];
 
-
 GUROBIAddQuadraticConstraintIndices[GUROBIData[id_]?(testGUROBIData[GUROBIAddQuadraticConstraint]), linind_, linvals_, quadrow_, quadcol_, quadvals_, sense_, rhs_] :=
 Module[{},
 	GUROBIAddQuadraticConstraint0[data, linind, linvals, quadrow, quadcol, quadvals, sense, rhs]
@@ -216,15 +214,14 @@ Module[{},
 
 GUROBIAddQuadraticConstraint[GUROBIData[id_]?(testGUROBIData[GUROBIAddQuadraticOptimizationConstraint]), Q_SparseArray, q_SparseArray, sense_, b_] :=
 Module[{},
-	(* 1/2 x^T.Q.x + q.x <= b *)
-	(* accept any matrix Q and vector q inputs and make them sparse if they are not *)
+	(* x^T.Q.x + q.x <= b *)
 	GUROBIAddQuadraticConstraint1[id, Q, q, sense, b]
 ]
 
 GUROBIAddSOCMembershipConstraint[GUROBIData[id_]?(testGUROBIData[GUROBIAddSOCMembershipConstraint]), ind_]:=
 Module[{n, linind, linvals, quadrow, quadcol, quadvals, sense, rhs},
 	(* x1^2+...+x(n-1)^2-xn^2 <= 0, xn>=0 *)
-Print["In GUROBIAddSOCMembershipConstraint"];
+	dPrint[3, "In GUROBIAddSOCMembershipConstraint"];
 	n = Length[ind];
 	dPrint[5, Normal[xGUROBIAddLinearConstraint0[id, {ind[[-1]]}, {1}, ">", 0]]];
 	GUROBIAddLinearConstraint0[id, {ind[[-1]]}, {1}, ">", 0];
@@ -235,17 +232,16 @@ Print["In GUROBIAddSOCMembershipConstraint"];
 	quadvals = Append[ConstantArray[1, n-1], -1];
 	sense = "<";
 	rhs = 0;
-	(*{Integer, {Integer, 1}, {Real, 1}, {Integer, 1}, {Integer, 1}, {Real, 1}, UTF8String, Real}, Integer];*)
 	dPrint[5, Normal[xGUROBIAddQuadraticConstraint0[id, linind, linvals, quadrow, quadcol, quadvals, sense, rhs]]];
   	GUROBIAddQuadraticConstraint0[id, linind, linvals, quadrow, quadcol, quadvals, sense, rhs]
 ]
 
 GUROBIAddSOCAffineConstraint[GUROBIData[id_]?(testGUROBIData[GUROBIAddSOCConstraintAsQuadratic]), A_, b_]:=
-Module[{n, Q, q, b1},
+Module[{n, Q, q, b1, psd},
 	(* This is only accepted for SOC constraint for diagonal A, with non-diagonal A
 	one may try to set the "NonConvex" parameter to 2 but this should not be very efficient *)
-	Print["In GUROBIAddSOCAffineConstraint"];
-	(*VectorGreaterEqual[{Ax + b, 0}, {"NormCone", n}] --> 1/2 x^T.Q.x + q.x <= b *)
+	dPrint[3, "In GUROBIAddSOCAffineConstraint"];
+	(*VectorGreaterEqual[{Ax + b, 0}, {"NormCone", n}] --> x^T.Q.x + q.x <= b *)
 	(*
 	an.x + bn >= 0,
 	||{a1.x + b1, ..., a (n - 1).x + b (n - 1)}|| <= an.x + bn
@@ -259,9 +255,18 @@ Module[{n, Q, q, b1},
 	Q = Sum[Transpose[{A[[i]]}].{A[[i]]}, {i, 1, n-1}] - Transpose[{A[[n]]}].{A[[n]]};
 	b1 = -Sum[b[[i]]^2, {i, 1, n-1}] + b[[n]]^2;
 	q = 2*(Sum[b[[i]]*A[[i]], {i, 1, n-1}] - b[[n]]*A[[n]]);
+
+	If[!DiagonalMatrixQ[A] && !PositiveSemidefiniteMatrixQ[Q], 
+		dPrint[3, "Matrix Q is not positive semidefinite and matrix A is not diagonal."]
+		Message[GUROBILink::badmethod]
+	];
 	dPrint[5, Normal[xGUROBIAddQuadraticConstraint1[id, SparseArray[Q], SparseArray[q], "<", b1]]];
 	GUROBIAddQuadraticConstraint1[id, SparseArray[Q], SparseArray[q], "<", b1]
 ]
+
+GUROBILink::badmethod = "Method \"GUROBI1\" is not suitable for general affine SOC constraints. \
+It is better to use method \"GUROBI\" instead. \
+If looking for adventure, try Method -> {\"GUROBI1\", \"NonConvex\" -> 2}."
 
 GUROBISetNumberOfConstraints[GUROBIData[id_]?(testGUROBIData[GUROBISetNumberOfConstraints]), ncons_]:=
 Module[{},
@@ -363,7 +368,9 @@ GUROBISlack[GUROBIData[id_]?(testGUROBIData[GUROBISlack])] := GUROBISlack0[id];
 
 (* Register convex method *)
 
-(* Use GUROBI1 method with membership SOC constraint 'x in K', or 'Ax+b in K' where A is diagonal *)
+(* Method "GUROBI1" is only for condstraints suppoted by GUROBI -- linear, quadratic and soc membership.
+	For general affine SOC constraints 'Ax+b in K', unless A is diagonal, use method "GUROBI", 
+	or try Method -> {"GUROBI1", "NonConvex" -> 2} *)
 Optimization`ConvexSolvers`RegisterConvexMethod["GUROBI1", 
 	Association[
 		"SolveFunction" -> GUROBISolve1,
@@ -373,8 +380,10 @@ Optimization`ConvexSolvers`RegisterConvexMethod["GUROBI1",
   	]
 ]
 
-(* GUROBI2 is for affine SOC constraint 'Ax+b in K'. It works by adding extra variables y = Ax+b *)
-Optimization`ConvexSolvers`RegisterConvexMethod["GUROBI2", 
+(* "GUROBI" method Solves problems with linear or quadratic objective and
+	linear, quadratic and second order cone affine constraints.
+	In order to handle affine SOC constraints it adds new variables y = A.x+b *)
+Optimization`ConvexSolvers`RegisterConvexMethod["GUROBI", 
 	Association[
 		"SolveFunction" -> GUROBISolve2,
 		"ObjectiveSupport" -> "Quadratic",
@@ -383,16 +392,15 @@ Optimization`ConvexSolvers`RegisterConvexMethod["GUROBI2",
  	]
 ]
 
-Optimization`ConvexSolvers`RegisterConvexMethod["GUROBI", 
+(*Optimization`ConvexSolvers`RegisterConvexMethod["GUROBI", 
 	Association[
 		"Submethods"->{"GUROBI2", "GUROBI1"}
   	]
-]
+]*)
 
 GUROBISolve1[problemData_, pmopts___] :=
 Module[{t0, data, objvec, objmat, nvars, ncons, affine, coneSpecifications, lpos, intvars, vartypes},
-	(* only for condstraints suppoted by GUROBI -- linear, quadratic and soc membership 
-	for others can try the option "NonConvex"->True *)
+	
 	t0 = AbsoluteTime[];
 
 	dPrint[1, "In GUROBISolve1"];
@@ -435,11 +443,6 @@ Module[{t0, data, objvec, objmat, nvars, ncons, affine, coneSpecifications, lpos
 		{a, b} = affine[[lpos]];
 		GUROBIAddSOCAffineConstraint[data, a, b];
 		dPrint[5, "norm {a,b}-> ", {a, b}];
-		(*
-		GUROBIAddSOCAffineConstraint seems to work only with diagonal matrix a, 
-		otherwise use GUROBI2 which uses GUROBIAddSOCMembershipConstraint[data, ind];
-		*)
-		If[!DiagonalMatrixQ[a], Return[$Failed]];
 	];
 
 	status = GUROBIOptimize[data, pmopts];
@@ -455,6 +458,8 @@ Module[{t0, data, objvec, objmat, nvars, ncons, affine, coneSpecifications, lpos
 	{status, GUROBI1Data[data, {}]}
 ]
 
+
+
 GUROBI1Data[data_, _]["PrimalMinimumValue"] := GUROBIObjectiveValue[data];
 GUROBI1Data[data_, _]["PrimalMinimizerVector"] := GUROBIx[data];
 (*GUROBI1Data[data_, _]["Slack"] := GUROBISlack[data];*)
@@ -462,7 +467,6 @@ GUROBI1Data[data_, _]["Slack"] := Missing["NotAvailable"];
 GUROBI1Data[data_, _]["DualMaximumValue"] := Missing["NotAvailable"];
 GUROBI1Data[data_, _]["DualityGap"] := Missing["NotAvailable"];
 GUROBI1Data[data_, _]["DualMaximizer"] := Missing["NotAvailable"];
-
 
 GUROBISolve2[problemData_, pmopts___] :=
 Module[{a, b, objvec, data, nvars, status, lpos, nextra, norig, integerColumns, t0, 
@@ -495,8 +499,7 @@ Module[{a, b, objvec, data, nvars, status, lpos, nextra, norig, integerColumns, 
 	integerColumns = problemData["IntegerVariableColumns"];
 
 	vartypes = StringJoin[Table[If[MemberQ[integerColumns, i], "I", "C"], {i, nvars}]];
-	Print[3, "vartypes: ", vartypes];
-
+	dPrint[3, "vartypes: ", vartypes];
 	
 	GUROBISetVariableTypesAndObjectiveVector[data, vartypes, objvec];
 	GUROBIAddQuadraticObjectiveMatrix[data, SparseArray[objmat]];
@@ -542,7 +545,6 @@ GUROBI2Data[data_, _]["DualMaximumValue"] := Missing["NotAvailable"];
 GUROBI2Data[data_, _]["DualityGap"] := Missing["NotAvailable"];
 GUROBI2Data[data_, _]["DualMaximizer"] := Missing["NotAvailable"];
 GUROBI2Data[data_, _]["Slack"] := Missing["NotAvailable"];
-
 
 End[]
 EndPackage[]
