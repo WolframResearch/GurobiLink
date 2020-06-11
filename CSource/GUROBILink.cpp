@@ -480,12 +480,12 @@ EXTERN_C DLLEXPORT int GUROBIData_AddQuadraticConstraint(WolframLibraryData libD
 	quadcol = (int *)malloc(numquadnz * sizeof(int));
 	//quadval = (double *)malloc(numquadnz * sizeof(double));
 	for (j = 0; j < numquadnz; j++) {
-		quadrow[j] = (char)idata[j] - 1;
+		quadrow[j] = (int)idata[j] - 1;
 	}
 	pT = MArgument_getMTensor(Args[4]);
 	idata = libData->MTensor_getIntegerData(pT);
 	for (j = 0; j < numquadnz; j++) {
-		quadcol[j] = (char)idata[j] - 1;
+		quadcol[j] = (int)idata[j] - 1;
 	}
 	pT =  MArgument_getMTensor(Args[5]);
 	quadval = libData->MTensor_getRealData(pT);
@@ -824,6 +824,8 @@ EXTERN_C DLLEXPORT int GUROBIData_GetObjectiveValue(WolframLibraryData libData, 
 	/* get optimal objective value */
 	error = GRBgetdblattr(GUROBIdata->model, GRB_DBL_ATTR_OBJVAL, &objval);
 
+	if (error) return LIBRARY_FUNCTION_ERROR;
+
 	/* load return values */
 	MArgument_setReal(Res, objval);
 
@@ -872,7 +874,7 @@ EXTERN_C DLLEXPORT int GUROBIData_Getx(WolframLibraryData libData, mint Argc, MA
 	sol = (double*)malloc(sizeof(double)*(GUROBIdata->nvars));
 	error = GRBgetdblattrarray(GUROBIdata->model, GRB_DBL_ATTR_X, 0, (int)(GUROBIdata->nvars), sol);
 
-	/* TODO: check error */
+	if (error) return LIBRARY_FUNCTION_ERROR;
 
 	setTensor(sol, GUROBIdata->nvars, solT);
 
@@ -913,6 +915,8 @@ EXTERN_C DLLEXPORT int GUROBIData_GetSlack(WolframLibraryData libData, mint Argc
 	/* get the minimizer vector */
 	slack = (double*)malloc(sizeof(double)*(allcons));
 	error = GRBgetdblattrarray(GUROBIdata->model, "Slack", 0, allcons, slack);
+
+	if (error) return LIBRARY_FUNCTION_ERROR;
 
 	setTensor(slack, allcons, slackT);
 
