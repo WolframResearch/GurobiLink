@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <cstring>
+#include <algorithm>
 #include "math.h"
 #include "WolframLibrary.h"
 #include "WolframSparseLibrary.h"
@@ -18,6 +19,7 @@ EXTERN_C DLLEXPORT int WolframLibrary_initialize(WolframLibraryData libraryData)
 	int err;
 	libData = libraryData;
 	err = (*libData->registerLibraryExpressionManager)("GUROBI_data_instance_manager", GUROBIDataMap_manage);
+	err = (*libData->registerLibraryExpressionManager)("GUROBI_environment_instance_manager", GUROBIEnvironmentMap_manage);
 
 	return err;
 }
@@ -25,6 +27,7 @@ EXTERN_C DLLEXPORT int WolframLibrary_initialize(WolframLibraryData libraryData)
 EXTERN_C DLLEXPORT void WolframLibrary_uninitialize(WolframLibraryData libData) {
 
 	(*libData->unregisterLibraryCallbackManager)("GUROBI_data_instance_manager");
+	(*libData->unregisterLibraryCallbackManager)("GUROBI_environment_instance_manager");
 
 	return;
 }
@@ -32,42 +35,41 @@ EXTERN_C DLLEXPORT void WolframLibrary_uninitialize(WolframLibraryData libData) 
 /************************************************************************/
 /*                GUROBIData_CheckLicense                               */
 /*                                                                      */
-/*                GUROBICheckLicense[data]                              */
+/*             GUROBICheckLicense[environment]                          */
 /************************************************************************/
 
 EXTERN_C DLLEXPORT int GUROBIData_CheckLicense(WolframLibraryData libData, mint Argc, MArgument *Args, MArgument Res)
 {
-	mint dataID, nolicense = 0;
-	GUROBIData GUROBIdata;
+	mint nolicense = 0;
+	GUROBIEnvironment GUROBIenvironment;
 
-	if (Argc != 1) {
-		return LIBRARY_FUNCTION_ERROR;
-	}
-	dataID = MArgument_getInteger(Args[0]);
-	GUROBIdata = GUROBIDataMap_get(dataID);
+	//if (Argc != 0) {
+	//	return LIBRARY_FUNCTION_ERROR;
+	//}
 
-	/* check error from GRBstartenv in GUROBIData_new*/
-	if (GUROBIdata->error == 10009) nolicense = 1;
+	GUROBIenvironment = GUROBIEnvironmentMap_get(1);
 
-	/* load return values */
+	// check error from GRBstartenv in GUROBIEnvironment_new
+	if (GUROBIenvironment->error == 10009) nolicense = 1;
+
+	// load return values
 	MArgument_setInteger(Res, nolicense);
 
 	return LIBRARY_NO_ERROR;
 }
 
-
 /******************************************************************************/
 /*             GUROBIData_SetVariableTypesAndObjectiveVector                  */
 /*                                                                            */
-/*     GUROBISetVariableTypesAndObjectiveVector[data, vartypes, objvector]    */
+/*     GUROBISetVariableTypesAndObjectiveVector[data, intvars, objvector]     */
 /******************************************************************************/
 
 EXTERN_C DLLEXPORT int GUROBIData_SetVariableTypesAndObjectiveVector(WolframLibraryData libData, mint Argc, MArgument *Args, MArgument Res)
 {
-	int i, error, nvars;
+	int error;
+	mint i, nvars, nintvars, dataID, *intvars=0;
 	char *vartypes=0;
-	double *objvec, *lbounds;
-	mint dataID;
+	double *objvec, *lbounds=0;
 	MTensor pT;
 	GUROBIData GUROBIdata;
 
@@ -77,32 +79,29 @@ EXTERN_C DLLEXPORT int GUROBIData_SetVariableTypesAndObjectiveVector(WolframLibr
 	dataID = MArgument_getInteger(Args[0]);
 	GUROBIdata = GUROBIDataMap_get(dataID);
 
-	/*
-	pT = MArgument_getMTensor(Args[1]);
-	nvars = libData->MTensor_getFlattenedLength(pT);
-	idata = libData->MTensor_getIntegerData(pT);
-
-	for (j = 0; j < nvars; j++) vartypes[j] = (char)idata[j] - 1;
-	GUROBIdata->nvars = nvars;
-	*/
-	vartypes = MArgument_getUTF8String(Args[1]);
-	nvars = (int)strlen(vartypes);
-	GUROBIdata->nvars = nvars;
+	pT =  MArgument_getMTensor(Args[1]);
+	nintvars = libData->MTensor_getFlattenedLength(pT);
+	intvars = libData->MTensor_getIntegerData(pT);
 
 	pT =  MArgument_getMTensor(Args[2]);
+	nvars = libData->MTensor_getFlattenedLength(pT);
 	objvec = libData->MTensor_getRealData(pT);
+	GUROBIdata->nvars = nvars;
 
-	//set lb to be a vector of -GRB_INFINITY, if we leave it NULL the default is 0.0
 	lbounds = (double *)malloc(nvars * sizeof(double));
-	for (i = 0; i < nvars; i++) {
-		lbounds[i] = -GRB_INFINITY;
-	}
-//	lbounds[nvars - 1] = 0.;
+	//set lb to be a vector of -GRB_INFINITY, if we leave it NULL the default is 0.0
+	std::fill_n(lbounds, nvars, -GRB_INFINITY);
 
-	/* Add objective vector and variable types */
+	vartypes = (char *)malloc(nvars * sizeof(char));
+	memset(vartypes, 'C', nvars);
+	for (i = 0; i < nintvars; i++) {
+		vartypes[intvars[i] - 1] = 'I';
+	}
+
+	// Add objective vector and variable types
 	error = GRBaddvars(GUROBIdata->model, (int)nvars, 0, NULL, NULL, NULL, objvec, lbounds, NULL, vartypes, NULL);
 
-	/* load return values */
+	// load return values
 	MArgument_setInteger(Res, (mint)error);
 
 	return LIBRARY_NO_ERROR;
@@ -391,7 +390,6 @@ EXTERN_C DLLEXPORT int GUROBIData_AddLinearConstraints(WolframLibraryData libDat
 	pT = MArgument_getMTensor(Args[3]);
 	rhs = libData->MTensor_getRealData(pT);
 	ncons = (int)(libData->MTensor_getFlattenedLength(pT));
-	GUROBIdata->ncons = (GUROBIdata->ncons) + ncons;
 
 	AMat = MArgument_getMSparseArray(Args[1]);
 
@@ -570,8 +568,6 @@ EXTERN_C DLLEXPORT int GUROBIData_AddQuadraticConstraint1(WolframLibraryData lib
 
 	rhs = MArgument_getReal(Args[4]);
 
-	// Update GUROBIdata->ncons?
-
 	// Add constraint coefficients indices and values, equal/ineq sign and right hand side
 	// example: 2 x0^2 + x0 x1 + x1^2 + 2 x1 + x2 <= 1
 	// int    numlinnz = 2;
@@ -597,34 +593,6 @@ EXTERN_C DLLEXPORT int GUROBIData_AddQuadraticConstraint1(WolframLibraryData lib
 
 	/* load return values */
 	MArgument_setInteger(Res, (mint)error);
-
-	return LIBRARY_NO_ERROR;
-}
-
-/************************************************************************/
-/*                GUROBIData_SetNumberOfConstraints                     */
-/*                                                                      */
-/*            GUROBISetNumberOfCOnstraints[data, ncons]                 */
-/************************************************************************/
-
-EXTERN_C DLLEXPORT int GUROBIData_SetNumberOfConstraints(WolframLibraryData libData, mint Argc, MArgument *Args, MArgument Res)
-{
-	int error = -1;
-	mint dataID, ncons;
-	GUROBIData GUROBIdata;
-
-	if (Argc != 2) {
-		return LIBRARY_FUNCTION_ERROR;
-	}
-	dataID = MArgument_getInteger(Args[0]);
-	GUROBIdata = GUROBIDataMap_get(dataID);
-
-	ncons = MArgument_getInteger(Args[1]);
-
-	GUROBIdata->ncons = ncons;
-
-	/* load return values */
-	MArgument_setInteger(Res, (mint)0);
 
 	return LIBRARY_NO_ERROR;
 }
@@ -728,51 +696,6 @@ EXTERN_C DLLEXPORT int GUROBIData_OptimizeModel(WolframLibraryData libData, mint
 	return LIBRARY_NO_ERROR;
 }
 
-/************************************************************************/
-/*                GUROBIData_GetSolution                                */
-/*                                                                      */
-/*             GUROBIGetSolution[data, attribute]                       */
-/************************************************************************/
-/*
-EXTERN_C DLLEXPORT int GUROBIData_GetSolution(WolframLibraryData libData, mint Argc, MArgument *Args, MArgument Res)
-{
-	int error;
-	mint dataID;
-	GUROBIData GUROBIdata;
-	double *sol;
-	int optimstatus;
-	const char* attr;
-	double objval;
-
-	if (Argc != 2) {
-		return LIBRARY_FUNCTION_ERROR;
-	}
-	dataID = MArgument_getInteger(Args[0]);
-	GUROBIdata = GUROBIDataMap_get(dataID);
-
-	attr = (char *)MArgument_getInteger(Args[1]);
-
-	switch(attr)
-	{
-	case GRB_INT_ATTR_STATUS:
-		error = GRBgetintattr(GUROBIdata->model, GRB_INT_ATTR_STATUS, &optimstatus);
-		break;
-	case GRB_DBL_ATTR_OBJVAL:
-		error = GRBgetdblattr(GUROBIdata->model, GRB_DBL_ATTR_OBJVAL, &objval);
-		break;
-	case GRB_DBL_ATTR_X:
-		sol = (double*)malloc(sizeof(double)*(GUROBIdata->nvars));
-		error = GRBgetdblattrarray(GUROBIdata->model, GRB_DBL_ATTR_X, 0, (int)(GUROBIdata->nvars), sol);
-		break;
-	default: error = -1;
-	}
-
-	MArgument_setInteger(Res, (mint)error);
-
-	return LIBRARY_NO_ERROR;
-}
-*/
-
 /*****************************************************************/
 /*                GUROBIData_GetStatusValue                      */
 /*                                                               */
@@ -800,7 +723,6 @@ EXTERN_C DLLEXPORT int GUROBIData_GetStatusValue(WolframLibraryData libData, min
 
 	return LIBRARY_NO_ERROR;
 }
-
 
 /************************************************************************/
 /*                GUROBIData_GetObjectiveValue                          */

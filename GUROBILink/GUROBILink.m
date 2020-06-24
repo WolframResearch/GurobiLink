@@ -27,15 +27,15 @@ GUROBISlack::usage = "GUROBISlack[data]"
 
 GUROBIData::usage = "GUROBIData[id] represents an instance of an GUROBIData expression created by GUROBIDataCreate."
 GUROBIDataID::usage = "GUROBIDataID[data] gives the instance id of an GUROBIData expression data."
-GUROBIDataQ::usage = "GUROBIDataQ[expr] gives True if expr represents an active instance of an GUROBIData object."
-GUROBIDataCreate::usage = "GUROBIDataCreate[] creates an instance of an GUROBIData expression."
+GUROBIDataQ::usage = "GUROBIDataQ[data] gives True if expr represents an active instance of an GUROBIData object."
+GUROBIDataCreate::usage = "data = GUROBIDataCreate[] creates an instance of an GUROBIData expression."
 GUROBIDataExpressions::ussage = "GUROBIDataExpressions[] shows all active GUROBIData expression instances."
-GUROBIDataDelete::usage = "GUROBIDataDelete[expr] removes an instance of an GUROBIData expression, freeing up memory."
+GUROBIDataDelete::usage = "GUROBIDataDelete[data] removes an instance of an GUROBIData expression, freeing up memory."
 
+GUROBIEnvironmentCreate::usage = "env = GUROBIEnvironmentCreate[] creates GUROBI environment."
+GUROBIEnvironmentDelete::usage = "GUROBIEnvironmentDelete[env] deletes GUROBI environment."
 
 (*TODO:
-add initial point
-add more messages
 add statuses to kernel
 *) 
 
@@ -44,10 +44,8 @@ Begin["`Private`"]
 
 $GUROBILinkDirectory = DirectoryName[$InputFileName];
 $targetDir = FileNameJoin[{$GUROBILinkDirectory, "LibraryResources", $SystemID}];
-(* $targetDir ="C:\\Users\\ninad\\Desktop\\dt\\GUROBI";*)
 
 $GUROBILinkLibrary = Block[{$LibraryPath = $targetDir}, FindLibrary["GUROBILink"]];
-(* $GUROBILinkLibrary = "C:\\Users\\ninad\\Desktop\\dt\\GUROBI\\GUROBILink.dll"; *)
 
 $GUROBILibrariesToPreload = Switch[$SystemID,
 	"Windows-x86-64",
@@ -60,40 +58,25 @@ $GUROBILibrariesToPreload = Switch[$SystemID,
  Load all the functions from the GUROBILink library
 *)
 
-$GUROBIPrintLevel = 0;
 dPrint = Optimization`Debug`OptimizationDebugPrint;
-(* Set print level 5 with Optimization`Debug`SetPrintLevel[5] *)
-(*GUROBILink`Private`pPrint = Print;*)
+pReset = Optimization`Debug`OptimizationProfileReset;
+pPrint = Optimization`Debug`OptimizationProfilePrint;
+(* Set print level 5 with Optimization`Debug`SetPrintLevel[5]
+   For GUROBILink only prints set:
+   GUROBILink`Private`dPrint = Print;*)
+(* Set profile print level 5 with Optimization`Debug`SetProfilePrintLevel[5]
+   and use Optimization`Debug`OptimizationProfile[...] *)
 
 needInitialization = True;
 
 $GUROBIInfinity = 1.*10^30;
 
-(*
-GUROBISetVariableTypesAndObjectiveVector[data, vartypes, objvector]
-GUROBISetVariableTypesAndBoundsAndObjectiveVector[data, vartypes, lowerbounds, upperbounds, objvector]
-GUROBIAddQuadraticObjectiveMatrix[data, Qmat]
-GUROBIAddLinearConstraint[data, vec, sense, rhs]
-GUROBIAddLinearConstraintIndices[data, indices, values, sense, rhs]
-GUROBIAddLinearConstraints[data, mat, sense, rhs]
-GUROBIAddQuadraticConstraint[data, Qmat, qvec, sense, rhs]
-GUROBIAddQuadraticConstraintIndices[data, linind, linvals, quadrow, quadcol, quadvals, sense, rhs]
-GUROBIAddSOCMembershipConstraint[data, ind]
-GUROBIAddSOCAffineConstraint[data, mat, vec]
-GUROBISetPArameters[data, maxit, tol, nonconvex]
-GUROBIOptimize[data]
-GUROBIStatusValue[data]
-GUROBIObjectiveValue[data]
-GUROBIx[data]
-GUROBISlack[data]
-*)
-
 
 LoadGUROBILink[] :=
 Block[{$LibraryPath = $targetDir}, 
 	Map[LibraryLoad, $GUROBILibrariesToPreload];
-	GUROBICheckLicense0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_CheckLicense", {Integer}, Integer];
-	GUROBISetVariableTypesAndObjectiveVector0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetVariableTypesAndObjectiveVector", {Integer, UTF8String, {Real, 1}}, Integer];
+	GUROBICheckLicense0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_CheckLicense", {}, Integer];
+	GUROBISetVariableTypesAndObjectiveVector0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetVariableTypesAndObjectiveVector", {Integer, {Integer, 1}, {Real, 1}}, Integer];
 	GUROBISetVariableTypesAndBoundsAndObjectiveVector0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetVariableTypesAndBoundsAndObjectiveVector", {Integer, UTF8String, {Real, 1}, {Real, 1}, {Real, 1}}, Integer];
 	GUROBIAddQuadraticObjectiveMatrix0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddQuadraticObjectiveMatrix", {Integer, LibraryDataType[SparseArray, Real, 2]}, Integer];
 	GUROBIAddLinearConstraint0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddLinearConstraint", {Integer, {Integer, 1}, {Real, 1}, UTF8String, Real}, Integer];
@@ -101,13 +84,11 @@ Block[{$LibraryPath = $targetDir},
 	GUROBIAddLinearConstraints0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddLinearConstraints", {Integer, LibraryDataType[SparseArray, Real, 2], UTF8String, {Real, 1}}, Integer];
 	GUROBIAddQuadraticConstraint0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddQuadraticConstraint", {Integer, {Integer, 1}, {Real, 1}, {Integer, 1}, {Integer, 1}, {Real, 1}, UTF8String, Real}, Integer];
 	GUROBIAddQuadraticConstraint1 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddQuadraticConstraint1", {Integer, LibraryDataType[SparseArray, Real, 2], LibraryDataType[SparseArray, Real, 1], UTF8String, Real}, Integer];
-	(*GUROBISetNumberOfConstraints0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetNumberOfConstraints", {Integer, Integer}, Integer];*)
 	GUROBISetParameters0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetParameters", {Integer, Integer, Real, Integer}, Integer];
 	GUROBISetStartingPoint0 =  LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetStartingPoint", {Integer, {Real, 1}}, Integer];
 
 	GUROBIOptimize0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_OptimizeModel", {Integer}, Integer];
 
-	(*GUROBIGetSolution0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_GetSolution", {Integer, Integer}, Integer];*)
 	GUROBIStatusValue0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_GetStatusValue", {Integer}, Integer];
 	GUROBIObjectiveValue0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_GetObjectiveValue", {Integer}, Real];
 	GUROBIx0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_Getx", {Integer}, {Real, 1}];
@@ -115,11 +96,11 @@ Block[{$LibraryPath = $targetDir},
 
 	GUROBIDataDelete0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIDataMap_delete", {Integer}, Integer];
 	GUROBIDataIDList = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIDataMap_retIDList", {}, {Integer, 1}];
+	GUROBIEnvironmentDelete0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIEnvironmentMap_delete", {Integer}, Integer];
 	needInitialization = False;
 ]
 
 LoadGUROBILink[]
-
 
 (* GUROBIData expression (GUROBISolMap) related: *)
 
@@ -156,16 +137,53 @@ Module[{list},
 	   $Failed,
 	   Map[GUROBIData, list]]
 ]
+
+(* GUROBIEnvironment related *)
+GUROBIEnvironmentID[e_GUROBIEnvironment] := ManagedLibraryExpressionID[e, "GUROBI_environment_instance_manager"];
+
+GUROBIEnvironmentQ[e_GUROBIEnvironment] := ManagedLibraryExpressionQ[e, "GUROBI_environment_instance_manager"];
+GUROBIEnvironmentQ[_] := False;
+
+testGUROBIEnvironment[][e_] := testGUROBIEnvironment[GUROBIEnvironment][e];
+testGUROBIEnvironment[mhead_Symbol][e_] :=
+If[TrueQ[GUROBIEnvironmentQ[e]],
+	True,
+	Message[MessageName[mhead, "gurobienvinst"], e]; False
+];
+testGUROBIEnvironment[_][e_] := TrueQ[GUROBIEnvironmentQ[e]];
+
+General::gurobienvinst = "`1` does not represent an active GUROBIEnvironment object.";
+
+GUROBIEnvironmentCreate[] :=
+Module[{},
+	If[needInitialization, LoadGUROBILink[]];
+	CreateManagedLibraryExpression["GUROBI_environment_instance_manager", GUROBIEnvironment]
+];
+
+GUROBIEnvironmentDelete[GUROBIEnvironment[id_]?(testGUROBIEnvironment[GUROBIEnvironmentDelete])] := GUROBIEnvironmentDelete0[id];
+
+(* Create one environment for the entire session, if not already created *)
+If[!GUROBIEnvironmentQ[env],
+	env = GUROBIEnvironmentCreate[];
+	If[GUROBIEnvironmentQ[env],
+		dPrint[5, env, " was created"],
+		dPrint[5, "Failed to create GUROBI environment"]
+	];
+	,
+	dPrint[5, "GUROBI environment is still ", env];
+];
+
+
 (* Check License *)
 
-GUROBICheckLicense[GUROBIData[id_]?(testGUROBIData[GUROBICheckLicense])]:=
+GUROBICheckLicense[]:=
 Module[{},
 	dPrint[1, "Checking for GUROBI license..."];
-	res = GUROBICheckLicense0[id];
+	res = GUROBICheckLicense0[];
 	If[res === 0,
 		dPrint[1, "...................license found."];
 		True
-		, (* else *)
+		,
 		Message[GUROBILink::license];
 		False
 	]
@@ -173,12 +191,15 @@ Module[{},
 
 GUROBILink::license = "Cannot find a valid GUROBI license for version 9.0 or greater." 
 
+(* Check for license, just one time *)
+GUROBICheckLicense[];
+
 (* Functions to set up the problem *)
 
-GUROBISetVariableTypesAndObjectiveVector[GUROBIData[id_]?(testGUROBIData[GUROBISetVariableTypesAndObjectiveVector]), vartypes_, objvector_]:=
+GUROBISetVariableTypesAndObjectiveVector[GUROBIData[id_]?(testGUROBIData[GUROBISetVariableTypesAndObjectiveVector]), intvars_, objvector_]:=
 Module[{},
 	dPrint[5, "Setting variable types and objective vector..."];
-	GUROBISetVariableTypesAndObjectiveVector0[id, vartypes, objvector]
+	GUROBISetVariableTypesAndObjectiveVector0[id, intvars, objvector]
 ];
 
 GUROBISetVariableTypesAndBoundsAndObjectiveVector[GUROBIData[id_]?(testGUROBIData[GUROBISetVariableTypesAndBoundsAndObjectiveVector]), vartypes_, lb_, ub_, objvector_]:=
@@ -190,7 +211,7 @@ GUROBIAddQuadraticObjectiveMatrix[GUROBIData[id_]?(testGUROBIData[GUROBIAddQuadr
 Module[{QGmat = Qmat/2},
 	dPrint[5, " In GUROBIAddQuadraticObjectiveMatrix"];
 	(*the GUROBI Q matrix absorbs the 1/2 coeefficient*)
-	dPrint[5, "Adding quadratic objective matrix ", Normal[QGmat]];
+	dPrint[5, "Adding quadratic objective matrix ", QGmat];
 	GUROBIAddQuadraticObjectiveMatrix0[id, QGmat]
 ];
 
@@ -206,7 +227,7 @@ Module[{},
 
 GUROBIAddLinearConstraints[GUROBIData[id_]?(testGUROBIData[GUROBIDataDelete]), mat_SparseArray, sense_, rhs_]:=
 Module[{},
-	dPrint[5, Normal[xGUROBIAddLinearConstraints0[id, mat, sense, rhs]]];
+	dPrint[5, xGUROBIAddLinearConstraints0[id, mat, sense, rhs]];
 	GUROBIAddLinearConstraints0[id, mat, sense, rhs]
 ];
 
@@ -226,7 +247,7 @@ Module[{n, linind, linvals, quadrow, quadcol, quadvals, sense, rhs},
 	(* x1^2+...+x(n-1)^2-xn^2 <= 0, xn>=0 *)
 	dPrint[3, "In GUROBIAddSOCMembershipConstraint"];
 	n = Length[ind];
-	dPrint[5, Normal[xGUROBIAddLinearConstraint0[id, {ind[[-1]]}, {1}, ">", 0]]];
+	dPrint[5, xGUROBIAddLinearConstraint0[id, {ind[[-1]]}, {1}, ">", 0]];
 	GUROBIAddLinearConstraint0[id, {ind[[-1]]}, {1}, ">", 0];
 	linind = {};
 	linvals = {};
@@ -235,7 +256,7 @@ Module[{n, linind, linvals, quadrow, quadcol, quadvals, sense, rhs},
 	quadvals = Append[ConstantArray[1, n-1], -1];
 	sense = "<";
 	rhs = 0;
-	dPrint[5, Normal[xGUROBIAddQuadraticConstraint0[id, linind, linvals, quadrow, quadcol, quadvals, sense, rhs]]];
+	dPrint[5, xGUROBIAddQuadraticConstraint0[id, linind, linvals, quadrow, quadcol, quadvals, sense, rhs]];
   	GUROBIAddQuadraticConstraint0[id, linind, linvals, quadrow, quadcol, quadvals, sense, rhs]
 ]
 
@@ -253,17 +274,16 @@ Module[{n, Q, q, b1, psd},
 	q = 2 (b1*a1 + ... b (n - 1)*a (n - 1) - bn*an) 
 	*)
 	n = Length[b];
-	dPrint[5, Normal[xGUROBIAddLinearConstraint1[id, SparseArray[A[[n]]], ">", -b[[n]]]]];
+	dPrint[5, xGUROBIAddLinearConstraint1[id, SparseArray[A[[n]]], ">", -b[[n]]]];
 	GUROBIAddLinearConstraint1[id, SparseArray[A[[n]]], ">", -b[[n]]];
 	Q = Sum[Transpose[{A[[i]]}].{A[[i]]}, {i, 1, n-1}] - Transpose[{A[[n]]}].{A[[n]]};
 	b1 = -Sum[b[[i]]^2, {i, 1, n-1}] + b[[n]]^2;
 	q = 2*(Sum[b[[i]]*A[[i]], {i, 1, n-1}] - b[[n]]*A[[n]]);
-
-	If[!DiagonalMatrixQ[A] && !PositiveSemidefiniteMatrixQ[Q], 
+	If[!DiagonalMatrixQ[A] && !PositiveSemidefiniteMatrixQ[Q],
 		dPrint[3, "Matrix Q is not positive semidefinite and matrix A is not diagonal."]
-		Message[GUROBILink::badmethod]
+		Message[GUROBILink::badmethod];
 	];
-	dPrint[5, Normal[xGUROBIAddQuadraticConstraint1[id, SparseArray[Q], SparseArray[q], "<", b1]]];
+	dPrint[5, xGUROBIAddQuadraticConstraint1[id, SparseArray[Q], SparseArray[q], "<", b1]];
 	GUROBIAddQuadraticConstraint1[id, SparseArray[Q], SparseArray[q], "<", b1]
 ]
 
@@ -310,11 +330,14 @@ Module[{tol, maxiter, nonconvex, mhead, verbose, status, error, data=GUROBIData[
 		dPrint[3, "Setting starting point ", startpt];
 		error = GUROBISetStartingPoint0[id, N[startpt]];
 	];
+
 	dPrint[3, "Setting parameters {maxiter, tol, nonconvex} -> ", {maxiter, tol, nonconvex}];
 	error = GUROBISetParameters0[id, maxiter, tol, nonconvex];
 
 	dPrint[1, "Solving with GUROBI..."];
+	pReset[4];
 	error = GUROBIOptimize0[id];
+	pPrint[4, "GUROBI solver"];
 	dPrint[1, "error: ", error];
 	status = GUROBIStatusValue0[id];
 	dPrint["status: ", status];
@@ -402,25 +425,22 @@ Optimization`ConvexSolvers`RegisterConvexMethod["GUROBI",
 ]*)
 
 GUROBISolve1[problemData_, pmopts___] :=
-Module[{t0, data, objvec, objmat, nvars, ncons, affine, coneSpecifications, lpos, intvars, vartypes, error},
-	
-	t0 = AbsoluteTime[];
+Module[{data, objvec, objmat, nvars, ncons, affine, coneSpecifications, lpos, intvars, vartypes, error},
 
+	pReset[4];
 	dPrint[1, "In GUROBISolve1"];
 	dPrint[3, "pmopts: ", pmopts];
 
 	data = GUROBIDataCreate[];
-	If[!GUROBIDataQ[data] || !GUROBICheckLicense[data], Return[$Failed]];
+	If[!GUROBIDataQ[data], Return[$Failed]];
 
 	objvec = problemData["ObjectiveVector"];
-	nvars = Length[objvec];
+
 	objmat = problemData["ObjectiveMatrix"];
 	intvars = problemData["IntegerVariableColumns"];
-	vartypes = StringJoin[Table[If[MemberQ[intvars, i], "I", "C"], {i, nvars}]];
-	dPrint[3, "nvars: ", nvars];
 	dPrint[3, "intvars: ", intvars];
-	dPrint[3, "vartypes: ", vartypes];
-	error = GUROBISetVariableTypesAndObjectiveVector[data, vartypes, objvec];
+
+	error = GUROBISetVariableTypesAndObjectiveVector[data, intvars, objvec];
 	If[error=!=0, Return[$Failed]];
 
 	error = GUROBIAddQuadraticObjectiveMatrix[data, SparseArray[objmat]];
@@ -441,7 +461,6 @@ Module[{t0, data, objvec, objmat, nvars, ncons, affine, coneSpecifications, lpos
 		If[error=!=0, Return[$Failed]];
 		lpos = 2;
 	];
-
 	If[ncons>=lpos && MatchQ[coneSpecifications[[lpos]],{"NonNegativeCone", _}],
 		{a, b} = affine[[lpos]];
 		dPrint[5, "ineq {a, b}-> ", {a, b}];
@@ -455,15 +474,14 @@ Module[{t0, data, objvec, objmat, nvars, ncons, affine, coneSpecifications, lpos
 		error = GUROBIAddSOCAffineConstraint[data, a, b];
 		If[error=!=0, Return[$Failed]];,
 	{i, lpos, ncons}];
+	pPrint[4, "Setting up the GUROBI problem"];
 
 	status = GUROBIOptimize[data, pmopts];
-	(*status = "Solved";*)
 	status = GUROBIStringStatus[data];
 	If[!StringQ[status], Return[$Failed]];
 	status = Optimization`SolutionData`WrapStatus[status];
 	(*Print["obj val: ", GUROBIObjectiveValue[data]];
-	Print["x: ",GUROBIx[data]];
-	Print["slack: ", GUROBISlack[data]];*)
+	Print["x: ",GUROBIx[data]];*)
 
 	dPrint[1, "status: ", status];
 	{status, GUROBI1Data[data, {}]}
@@ -473,7 +491,6 @@ Module[{t0, data, objvec, objmat, nvars, ncons, affine, coneSpecifications, lpos
 
 GUROBI1Data[data_, _]["PrimalMinimumValue"] := GUROBIObjectiveValue[data];
 GUROBI1Data[data_, _]["PrimalMinimizerVector"] := GUROBIx[data];
-(*GUROBI1Data[data_, _]["Slack"] := GUROBISlack[data];*)
 GUROBI1Data[data_, _]["Slack"] := Missing["NotAvailable"];
 GUROBI1Data[data_, _]["DualMaximumValue"] := Missing["NotAvailable"];
 GUROBI1Data[data_, _]["DualityGap"] := Missing["NotAvailable"];
@@ -482,21 +499,20 @@ GUROBI1Data[data_, _]["DualMaximizer"] := Missing["NotAvailable"];
 GUROBISolve2[problemData_, pmopts___] :=
 Module[{a, b, objvec, data, nvars, status, lpos, nextra, norig, integerColumns, t0, 
 	affine, coneSpecifications, coneVariableIndexes, vartypes},
-	(* corresponds to MOSEKPrimal *)
-	t0 = AbsoluteTime[];
+	(* For method GUROBI *)
 
 	dPrint[1, "In GUROBISolve2"];
 	dPrint[3, "pmopts: ", pmopts];
+	pReset[4];
 
 	data = GUROBIDataCreate[];
-	If[!GUROBIDataQ[data] || !GUROBICheckLicense[data], Return[$Failed]];
-	
+	If[!GUROBIDataQ[data], Return[$Failed]];
+	pPrint[4, "Setting up GUROBI: create and check data"];
 	objvec = problemData["ObjectiveVector"];
 	nvars = Length[objvec];
 	objmat = problemData["ObjectiveMatrix"];
 	nextra = Lookup[problemData, "ExtraColumns", 0];
 	norig = nvars - nextra;
-
 	affine = problemData["ConicConstraintAffineLists"];
 	coneSpecifications = problemData["ConicConstraintConeSpecifications"];
 	ncons = Length[coneSpecifications];
@@ -509,16 +525,14 @@ Module[{a, b, objvec, data, nvars, status, lpos, nextra, norig, integerColumns, 
 	dPrint[5, "coneVariableIndexes: ", coneVariableIndexes];
 
 	integerColumns = problemData["IntegerVariableColumns"];
+	pPrint[4, "Setting up GUROBI: get problem data"];
 
-	vartypes = StringJoin[Table[If[MemberQ[integerColumns, i], "I", "C"], {i, nvars}]];
-	dPrint[3, "vartypes: ", vartypes];
-	
-	error = GUROBISetVariableTypesAndObjectiveVector[data, vartypes, objvec];
+	error = GUROBISetVariableTypesAndObjectiveVector[data, integerColumns, objvec];
 	If[error=!=0, Return[$Failed]];
-
+	pPrint[4, "Setting up GUROBI: set vars and linear objective"];
 	error = GUROBIAddQuadraticObjectiveMatrix[data, SparseArray[objmat]];
 	If[error=!=0, Return[$Failed]];
-	
+	pPrint[4, "Setting up GUROBI: set quad objective"];
 	(* "EqualityConstraint" will always come first and then "NonNegativeCone" *)
 	lpos = 1;
 	If[ncons >= 1 && MatchQ[coneSpecifications[[1]],{"EqualityConstraint", _}],
@@ -533,26 +547,25 @@ Module[{a, b, objvec, data, nvars, status, lpos, nextra, norig, integerColumns, 
 		If[error=!=0, Return[$Failed]];
 		lpos += 1;
 	];
+	pPrint[4, "Setting up GUROBI: set linear constraints"];
 	Do[
 		error = GUROBIAddSOCMembershipConstraint[data, coneVariableIndexes[[i]]];
 		If[error=!=0, Return[$Failed]];,
 	{i, lpos, ncons}];
+	pPrint[4, "Setting up GUROBI: set SOC constraints"];
 
 	(* GUROBISolve: *)
 	status = GUROBIOptimize[data, pmopts];
-	(*status = "Solved";*)
 	status = GUROBIStringStatus[data];
 	If[!StringQ[status], Return[$Failed]];
 	status = Optimization`SolutionData`WrapStatus[status];
 	(*Print["obj val: ", GUROBIObjectiveValue[data]];
-	Print["x: ",GUROBIx[data]];
-	Print["slack: ", GUROBISlack[data]];*)
+	Print["x: ",GUROBIx[data]];*)
 
 	{status, GUROBI2Data[data, {integerColumns}]}
 ];
 
 GUROBI2Data[data_, _]["PrimalMinimumValue"] := GUROBIObjectiveValue[data];
-(*GUROBI2Data[data_, {integerColumns_}]["PrimalMinimizerVector"] :=  GUROBIx[data];*)
 GUROBI2Data[data_, {integerColumns_}]["PrimalMinimizerVector"] := 
 Block[{x = GUROBIx[data], res},
 	If[Length[integerColumns] > 0,

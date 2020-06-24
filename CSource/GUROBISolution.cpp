@@ -7,11 +7,15 @@
 #include "gurobi_c.h"
 
 int GUROBIData_initialize(GUROBIData GUROBIdata) {
-	GUROBIdata->env  = NULL;
 	GUROBIdata->model = NULL;
 	GUROBIdata->nvars = 0;
-	GUROBIdata->ncons = 0;
 	GUROBIdata->error = 0;
+	return 0;
+}
+
+int GUROBIEnvironment_initialize(GUROBIEnvironment GUROBIenvironment) {
+	GUROBIenvironment->env  = NULL;
+	GUROBIenvironment->error  = 0;
 	return 0;
 }
 
@@ -20,28 +24,41 @@ GUROBIData GUROBIData_new(void)
 	GUROBIData GUROBIdata;
 	GUROBIdata = (GUROBIData)malloc(sizeof(*GUROBIdata));
 	GUROBIData_initialize(GUROBIdata);
-	GUROBIdata->error = GRBemptyenv(&(GUROBIdata->env));
-	if (!(GUROBIdata->error)) {
-		/* 0 variables, no problem info yet */
-		// GUROBIdata->error = GRBsetstrparam(GUROBIdata->env, "LogFile", "Mo.log");
-		GUROBIdata->error = GRBstartenv(GUROBIdata->env);
-		if (!(GUROBIdata->error)) {
-			GUROBIdata->error = GRBnewmodel(GUROBIdata->env, &(GUROBIdata->model), "Mo", 0, NULL, NULL, NULL, NULL, NULL);
-		}
-	}
+	GUROBIEnvironment GUROBIenvironment = GUROBIEnvironmentMap_get(1);
+	GUROBIdata->error = GRBnewmodel(GUROBIenvironment->env, &(GUROBIdata->model), "Mo", 0, NULL, NULL, NULL, NULL, NULL);
 	return GUROBIdata;
 }
 
+GUROBIEnvironment GUROBIEnvironment_new(void)
+{
+	GUROBIEnvironment GUROBIenvironment;
+	GUROBIenvironment = (GUROBIEnvironment)malloc(sizeof(*GUROBIenvironment));
+	GUROBIEnvironment_initialize(GUROBIenvironment);
+	GUROBIenvironment->error = GRBemptyenv(&(GUROBIenvironment->env));
+	if (!GUROBIenvironment->error) {
+		/* 0 variables, no problem info yet */
+		GUROBIenvironment->error = GRBsetstrparam(GUROBIenvironment->env, "LogFile", "Mo.log");
+		GUROBIenvironment->error = GRBstartenv(GUROBIenvironment->env);
+	}
+	return GUROBIenvironment;
+}
+
 int GUROBIData_delete(GUROBIData gurobidata) {
-	/* delete env, model */
 	GRBfreemodel(gurobidata->model);
-	GRBfreeenv(gurobidata->env);
 	free(gurobidata);
 	gurobidata = NULL;
 	return 0;
 }
 
+int GUROBIEnvironment_delete(GUROBIEnvironment GUROBIenvironment) {
+	GRBfreeenv(GUROBIenvironment->env);
+	free(GUROBIenvironment);
+	GUROBIenvironment = NULL;
+	return 0;
+}
+
 static std::unordered_map<mint, GUROBIData> GUROBIDataMap;
+static std::unordered_map<mint, GUROBIEnvironment> GUROBIEnvironmentMap;
 
 EXTERN_C DLLEXPORT void GUROBIDataMap_manage(WolframLibraryData libData, mbool mode, mint id)
 {
@@ -51,6 +68,17 @@ EXTERN_C DLLEXPORT void GUROBIDataMap_manage(WolframLibraryData libData, mbool m
 	else if (GUROBIDataMap[id] != NULL) {
 		GUROBIData_delete(GUROBIDataMap[id]);
 		GUROBIDataMap.erase(id);
+	}
+}
+
+EXTERN_C DLLEXPORT void GUROBIEnvironmentMap_manage(WolframLibraryData libData, mbool mode, mint id)
+{
+	if (mode == 0) {
+		GUROBIEnvironmentMap[id] = GUROBIEnvironment_new();
+	}
+	else if (GUROBIEnvironmentMap[id] != NULL) {
+		GUROBIEnvironment_delete(GUROBIEnvironmentMap[id]);
+		GUROBIEnvironmentMap.erase(id);
 	}
 }
 
@@ -65,12 +93,31 @@ EXTERN_C DLLEXPORT int GUROBIDataMap_delete(WolframLibraryData libData, mint Arg
 		return LIBRARY_FUNCTION_ERROR;
 	}
 	GUROBIData_delete(GUROBIDataMap[id]);
-	return (*libData->releaseManagedLibraryExpression)("GUROBI_solution_instance_manager", id);
+	return (*libData->releaseManagedLibraryExpression)("GUROBI_data_instance_manager", id);
+}
+
+EXTERN_C DLLEXPORT int GUROBIEnvironmentMap_delete(WolframLibraryData libData, mint Argc, MArgument *Args, MArgument res)
+{
+	mint id;
+	if (Argc != 1) {
+		return LIBRARY_FUNCTION_ERROR;
+	}
+	id = MArgument_getInteger(Args[0]);
+	if (GUROBIEnvironmentMap[id] == NULL) {
+		return LIBRARY_FUNCTION_ERROR;
+	}
+	GUROBIEnvironment_delete(GUROBIEnvironmentMap[id]);
+	return (*libData->releaseManagedLibraryExpression)("GUROBI_environment_instance_manager", id);
 }
 
 GUROBIData GUROBIDataMap_get(mint id)
 {
 	return GUROBIDataMap[id];
+}
+
+GUROBIEnvironment GUROBIEnvironmentMap_get(mint id)
+{
+	return GUROBIEnvironmentMap[id];
 }
 
 EXTERN_C DLLEXPORT int GUROBIDataMap_retIDList(WolframLibraryData libData, mint Argc, MArgument *Args, MArgument res)
@@ -94,11 +141,4 @@ EXTERN_C DLLEXPORT int GUROBIDataMap_retIDList(WolframLibraryData libData, mint 
 	}
 	MArgument_setMTensor(res, resTen);
 	return err;
-}
-
-GUROBIData GUROBIData_set(WolframLibraryData libData, mint solID)
-{
-	GUROBIData GUROBIdata = GUROBIDataMap[solID];
-
-	return GUROBIdata;
 }
