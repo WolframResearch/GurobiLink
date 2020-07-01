@@ -49,11 +49,34 @@ EXTERN_C DLLEXPORT int GUROBIData_CheckLicense(WolframLibraryData libData, mint 
 
 	GUROBIenvironment = GUROBIEnvironmentMap_get(1);
 
-	// check error from GRBstartenv in GUROBIEnvironment_new
-	if (GUROBIenvironment->error == 10009) nolicense = 1;
-
 	// load return values
-	MArgument_setInteger(Res, nolicense);
+	MArgument_setInteger(Res, GUROBIenvironment->error);
+
+	return LIBRARY_NO_ERROR;
+}
+
+
+/************************************************************************/
+/*                GUROBIData_CheckModel                                 */
+/*                                                                      */
+/*                GUROBICheckModel[data]                                */
+/************************************************************************/
+
+EXTERN_C DLLEXPORT int GUROBIData_CheckModel(WolframLibraryData libData, mint Argc, MArgument *Args, MArgument Res)
+{
+	mint dataID;
+	GUROBIData GUROBIdata;
+
+	if (Argc != 1) {
+		return LIBRARY_FUNCTION_ERROR;
+	}
+
+	dataID = MArgument_getInteger(Args[0]);
+	GUROBIdata = GUROBIDataMap_get(dataID);
+
+
+	// return the error from GRBnewmodel in GUROBIEData_new
+	MArgument_setInteger(Res, (mint)(GUROBIdata->error));
 
 	return LIBRARY_NO_ERROR;
 }
@@ -88,12 +111,22 @@ EXTERN_C DLLEXPORT int GUROBIData_SetVariableTypesAndObjectiveVector(WolframLibr
 	objvec = libData->MTensor_getRealData(pT);
 	GUROBIdata->nvars = nvars;
 
+	if (!objvec) {
+		MArgument_setInteger(Res, (mint)1234); return LIBRARY_NO_ERROR;
+	}
+
 	lbounds = (double *)malloc(nvars * sizeof(double));
 	//set lb to be a vector of -GRB_INFINITY, if we leave it NULL the default is 0.0
 	std::fill_n(lbounds, nvars, -GRB_INFINITY);
+	/*for (i = 0; i < nvars; i++) {
+		lbounds[i] = -GRB_INFINITY;
+	}*/
 
 	vartypes = (char *)malloc(nvars * sizeof(char));
 	memset(vartypes, 'C', nvars);
+	/*for (i = 0; i < nvars; i++) {
+		vartypes[i] = 'C';
+	}*/
 	for (i = 0; i < nintvars; i++) {
 		vartypes[intvars[i] - 1] = 'I';
 	}
