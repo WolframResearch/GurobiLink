@@ -1,0 +1,88 @@
+---
+BasedOnStyle: WebKit
+UseTab: Always
+TabWidth: 4
+---
+Language: Cpp
+
+
+######################
+# The major settings
+######################
+
+# Always break before braces
+BreakBeforeBraces: Allman
+
+# 120 column limit (counting tabs as 4)
+ColumnLimit: 120
+
+
+#########################################
+# Everything else in alphabetical order
+#########################################
+
+
+# When breaking between function arguments, align subsequent lines with the first
+# argument on the first line
+AlignAfterOpenBracket: Align
+
+# When line-breaking into multiple lines that require escaping, line up the backslash
+# escapes as far left as possible.  If the last line is longer than any of the previous
+# ones, this means that the backslash might actually be to the left of the last line's
+# right most point.
+AlignEscapedNewlines: Left
+
+# Only allow single-line function declarations in classes
+AllowShortFunctionsOnASingleLine: Inline
+
+# 'template <...>' always goes on its own line
+AlwaysBreakTemplateDeclarations: true
+
+# When line-breaking binary operators, put the operator on the new line, except for =
+BreakBeforeBinaryOperators: NonAssignment
+
+# Commas and colons in constructors begin new lines
+BreakBeforeInheritanceComma: true
+
+# We have some very long lines with -----, don't break those
+CommentPragmas: ---------
+
+# Macros which should be treated as for-each constructs...
+ForEachMacros: ['forString', 'forString_isASCII']
+
+# Indent cases in switch statements
+IndentCaseLabels: true
+
+# If a function declaration is forced to break before the arguments (e.g.,
+# between the return type and the function name), then indent after the break.
+IndentWrappedFunctionNames: true
+
+# Add comments after the closing brace of a namespace to indicate which
+# namespace is being closed
+FixNamespaceComments: true
+
+# This drops the comment breaking penality just enough so that comments will tend to
+# get broken rather than other kinds of line-breaking happening.  We don't want,
+# for example, to break function calls after the open paren in order to get an entire
+# comment onto one line.
+PenaltyBreakComment: 30
+
+# We do want it to be able to go a bit over 120 characters...don't penalize too much
+PenaltyExcessCharacter: 3
+
+# We'll still break after the return type when absolutely necessary (and indent
+# per the IndentWrappedFunctionNames setting), but we prefer to keep the function
+# name with the return type and break after the opening paren.  E.g.,
+# returntype funcname(
+#            arg1);
+PenaltyReturnTypeOnItsOwnLine: 500
+
+# Not sure if we want to sort includes, but since it could definitely break things
+# keep off for now.
+SortIncludes: false
+
+# For comments trailing code, put two spaces between the code and the comment.
+SpacesBeforeTrailingComments: 2
+
+# Use tabs for indentation and line continuation, but not for every whitespace everywhere
+UseTab: ForContinuationAndIndentation

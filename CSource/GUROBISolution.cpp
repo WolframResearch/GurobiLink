@@ -1,41 +1,43 @@
-#include <stdlib.h>
-#include <stdio.h>
+#include <cstdlib>
 #include "WolframLibrary.h"
-#include "WolframSparseLibrary.h"
 #include "GUROBISolution.h"
 #include <unordered_map>
 #include "gurobi_c.h"
 
-int GUROBIData_initialize(GUROBIData GUROBIdata) {
-	GUROBIdata->model = NULL;
+int GUROBIData_initialize(GUROBIData GUROBIdata)
+{
+	GUROBIdata->model = nullptr;
 	GUROBIdata->nvars = 0;
 	GUROBIdata->error = 0;
 	return 0;
 }
 
-int GUROBIEnvironment_initialize(GUROBIEnvironment GUROBIenvironment) {
-	GUROBIenvironment->env  = NULL;
-	GUROBIenvironment->error  = 0;
+int GUROBIEnvironment_initialize(GUROBIEnvironment GUROBIenvironment)
+{
+	GUROBIenvironment->env = nullptr;
+	GUROBIenvironment->error = 0;
 	return 0;
 }
 
-GUROBIData GUROBIData_new(void)
+GUROBIData GUROBIData_new()
 {
 	GUROBIData GUROBIdata;
 	GUROBIdata = (GUROBIData)malloc(sizeof(*GUROBIdata));
 	GUROBIData_initialize(GUROBIdata);
 	GUROBIEnvironment GUROBIenvironment = GUROBIEnvironmentMap_get(1);
-	GUROBIdata->error = GRBnewmodel(GUROBIenvironment->env, &(GUROBIdata->model), "Mo", 0, NULL, NULL, NULL, NULL, NULL);
+	GUROBIdata->error =
+		GRBnewmodel(GUROBIenvironment->env, &(GUROBIdata->model), "Mo", 0, nullptr, nullptr, nullptr, nullptr, nullptr);
 	return GUROBIdata;
 }
 
-GUROBIEnvironment GUROBIEnvironment_new(void)
+GUROBIEnvironment GUROBIEnvironment_new()
 {
 	GUROBIEnvironment GUROBIenvironment;
 	GUROBIenvironment = (GUROBIEnvironment)malloc(sizeof(*GUROBIenvironment));
 	GUROBIEnvironment_initialize(GUROBIenvironment);
 	GUROBIenvironment->error = GRBemptyenv(&(GUROBIenvironment->env));
-	if (!GUROBIenvironment->error) {
+	if (!GUROBIenvironment->error)
+	{
 		/* 0 variables, no problem info yet */
 		GUROBIenvironment->error = GRBsetstrparam(GUROBIenvironment->env, "LogFile", "Mo.log");
 		GUROBIenvironment->error = GRBstartenv(GUROBIenvironment->env);
@@ -43,17 +45,19 @@ GUROBIEnvironment GUROBIEnvironment_new(void)
 	return GUROBIenvironment;
 }
 
-int GUROBIData_delete(GUROBIData gurobidata) {
+int GUROBIData_delete(GUROBIData gurobidata)
+{
 	GRBfreemodel(gurobidata->model);
 	free(gurobidata);
-	gurobidata = NULL;
+	gurobidata = nullptr;
 	return 0;
 }
 
-int GUROBIEnvironment_delete(GUROBIEnvironment GUROBIenvironment) {
+int GUROBIEnvironment_delete(GUROBIEnvironment GUROBIenvironment)
+{
 	GRBfreeenv(GUROBIenvironment->env);
 	free(GUROBIenvironment);
-	GUROBIenvironment = NULL;
+	GUROBIenvironment = nullptr;
 	return 0;
 }
 
@@ -62,10 +66,12 @@ static std::unordered_map<mint, GUROBIEnvironment> GUROBIEnvironmentMap;
 
 EXTERN_C DLLEXPORT void GUROBIDataMap_manage(WolframLibraryData libData, mbool mode, mint id)
 {
-	if (mode == 0) {
+	if (mode == 0)
+	{
 		GUROBIDataMap[id] = GUROBIData_new();
 	}
-	else if (GUROBIDataMap[id] != NULL) {
+	else if (GUROBIDataMap[id] != nullptr)
+	{
 		GUROBIData_delete(GUROBIDataMap[id]);
 		GUROBIDataMap.erase(id);
 	}
@@ -73,37 +79,43 @@ EXTERN_C DLLEXPORT void GUROBIDataMap_manage(WolframLibraryData libData, mbool m
 
 EXTERN_C DLLEXPORT void GUROBIEnvironmentMap_manage(WolframLibraryData libData, mbool mode, mint id)
 {
-	if (mode == 0) {
+	if (mode == 0)
+	{
 		GUROBIEnvironmentMap[id] = GUROBIEnvironment_new();
 	}
-	else if (GUROBIEnvironmentMap[id] != NULL) {
+	else if (GUROBIEnvironmentMap[id] != nullptr)
+	{
 		GUROBIEnvironment_delete(GUROBIEnvironmentMap[id]);
 		GUROBIEnvironmentMap.erase(id);
 	}
 }
 
-EXTERN_C DLLEXPORT int GUROBIDataMap_delete(WolframLibraryData libData, mint Argc, MArgument *Args, MArgument res)
+EXTERN_C DLLEXPORT int GUROBIDataMap_delete(WolframLibraryData libData, mint Argc, MArgument* Args, MArgument res)
 {
 	mint id;
-	if (Argc != 1) {
+	if (Argc != 1)
+	{
 		return LIBRARY_FUNCTION_ERROR;
 	}
 	id = MArgument_getInteger(Args[0]);
-	if (GUROBIDataMap[id] == NULL) {
+	if (GUROBIDataMap[id] == nullptr)
+	{
 		return LIBRARY_FUNCTION_ERROR;
 	}
 	GUROBIData_delete(GUROBIDataMap[id]);
 	return (*libData->releaseManagedLibraryExpression)("GUROBI_data_instance_manager", id);
 }
 
-EXTERN_C DLLEXPORT int GUROBIEnvironmentMap_delete(WolframLibraryData libData, mint Argc, MArgument *Args, MArgument res)
+EXTERN_C DLLEXPORT int GUROBIEnvironmentMap_delete(WolframLibraryData libData, mint Argc, MArgument* Args, MArgument res)
 {
 	mint id;
-	if (Argc != 1) {
+	if (Argc != 1)
+	{
 		return LIBRARY_FUNCTION_ERROR;
 	}
 	id = MArgument_getInteger(Args[0]);
-	if (GUROBIEnvironmentMap[id] == NULL) {
+	if (GUROBIEnvironmentMap[id] == nullptr)
+	{
 		return LIBRARY_FUNCTION_ERROR;
 	}
 	GUROBIEnvironment_delete(GUROBIEnvironmentMap[id]);
@@ -120,7 +132,7 @@ GUROBIEnvironment GUROBIEnvironmentMap_get(mint id)
 	return GUROBIEnvironmentMap[id];
 }
 
-EXTERN_C DLLEXPORT int GUROBIDataMap_retIDList(WolframLibraryData libData, mint Argc, MArgument *Args, MArgument res)
+EXTERN_C DLLEXPORT int GUROBIDataMap_retIDList(WolframLibraryData libData, mint Argc, MArgument* Args, MArgument res)
 {
 	mint i, num = GUROBIDataMap.size();
 	mint dims[1];
@@ -133,9 +145,11 @@ EXTERN_C DLLEXPORT int GUROBIDataMap_retIDList(WolframLibraryData libData, mint 
 	mint* elems = libData->MTensor_getIntegerData(resTen);
 	std::unordered_map<mint, GUROBIData>::const_iterator iter = GUROBIDataMap.begin();
 	std::unordered_map<mint, GUROBIData>::const_iterator end = GUROBIDataMap.end();
-	for (i = 0; i < num; i++) {
+	for (i = 0; i < num; i++)
+	{
 		elems[i] = iter->first;
-		if (iter != end) {
+		if (iter != end)
+		{
 			iter++;
 		}
 	}
