@@ -1,9 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 project(GUROBILink)
 
-set(GUROBI_VERSION "9.0" CACHE STRING "GUROBI version")
-#set(GUROBI_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../Libraries/GUROBI/${GUROBI_VERSION}/tools/platform" CACHE PATH "GUROBI installation")
-set(GUROBI_ROOT "C:/gurobi902" CACHE PATH "GUROBI installation")
+set(GUROBI_VERSION "9.2" CACHE STRING "GUROBI version")
+set(GUROBI_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../Libraries/GUROBI/${GUROBI_VERSION}" CACHE PATH "GUROBI installation")
 
 set(MATHEMATICA_LAYOUT "C:/Program Files/Wolfram Research/Mathematica/12.2" CACHE PATH "Mathematica installation")
 set(INSTALL_PDB OFF CACHE BOOL "Include PDB file in paclet layout")
