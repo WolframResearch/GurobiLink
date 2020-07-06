@@ -1,0 +1,101 @@
+<project name='GUROBILink' basedir='..'>
+
+	<property name='component' value='${ant.project.name}'/>
+	<property name='build_type' value='Release'/>
+	<property name='system_id' value='### Must be set by Jenkins ###'/>
+
+	<property environment='env'/>
+	<import file='${env.RE_ANTLIBRARY_HOME}/ant-lib.xml'/>
+
+	<!--
+		Component (platform-independent)
+	-->
+
+	<!--
+		Native libraries
+	-->
+
+	<target name='NativeLibrary.GUROBILink.init.custom' extensionOf='NativeLibrary.init.custom'>
+
+
+		<!--
+			library.makefiles.dir - CMake generates makefiles here
+		-->
+
+		<property name='library.makefiles.dir' value='${scratch_directory}${file.separator}Library.Makefiles'/>
+
+
+	</target>
+
+	<target name='NativeLibrary.GUROBILink.clean' extensionOf='NativeLibrary.clean'>
+
+		<delete dir='${library.makefiles.dir}'/>
+
+	</target>
+
+	<target name='NativeLibrary.GUROBILink.execute' extensionOf='NativeLibrary.execute'>
+
+		<condition property='cmake.generator' value='-G &quot;${env.CMAKE_GENERATOR}&quot;' else=''>
+			<matches pattern="Windows" string="${system_id}"/>
+		</condition>
+		<mkdir dir='${library.makefiles.dir}'/>
+
+		<echo message='${line.separator}
+		${cmake.exe}${line.separator}
+		-DWOLFRAM_INCLUDE_PATH=${checkout_directory}/RuntimeLibrary/${system_id}${line.separator}
+		-DCMAKE_BUILD_TYPE=Release${line.separator}
+		-DCMAKE_BUILD_TYPE:STRING=Release${line.separator}
+		-DCMAKE_INSTALL_PREFIX=${files_directory}${line.separator}
+		${cmake.generator}${line.separator}
+		${checkout_directory}/GUROBILink/CSource${line.separator}'/>
+
+
+		<exec dir='${library.makefiles.dir}' executable='${cmake.exe}' failonerror='true'>
+			<arg line='-DWOLFRAM_INCLUDE_PATH=${checkout_directory}/RuntimeLibrary/${system_id}'/>
+			<arg line='-DCMAKE_BUILD_TYPE=Release'/>
+			<arg line='-DCMAKE_INSTALL_PREFIX=${files_directory}'/>
+			<arg line='${cmake.generator}'/>
+			<arg value='${checkout_directory}/GUROBILink/CSource'/>
+		</exec>
+
+		<exec dir='${library.makefiles.dir}' executable='${cmake.exe}' failonerror='true' searchpath='true'>
+			<arg line='--build .'/>
+			<arg line='--target install'/>
+			<arg line='--config Release'/>
+		</exec>
+
+
+	</target>
+
+	<target name='NativeLibrary.GUROBILink.MacOSX-x86-64.postbuild' extensionOf='NativeLibrary.postbuild' if='is.osx'>
+
+		<sign dir='${files_directory}'>
+			<include name='**/*.dylib'/>
+		</sign>
+
+	</target>
+
+	<target name='NativeLibrary.GUROBILink.Windows-x86-64.postbuild' extensionOf='NativeLibrary.postbuild'
+			if='is.windows'>
+
+		<sign dir='${files_directory}'>
+			<include name='**/*.dll'/>
+			<include name='**/*.exe'/>
+			<include name='**/*.lib'/>
+		</sign>
+
+	</target>
+
+	<target name='Paclet.GUROBILink.init.custom' extensionOf='Paclet.init.custom'>
+
+		<!--
+		 Prevent Paclet.clean from deleting files_directory,
+		 since CopyAndUnarchiveArtifact just put all the paclet
+		 files in there....
+		 -->
+
+		<property name='keep.files_directory' value='true'/>
+
+	</target>
+
+</project>
