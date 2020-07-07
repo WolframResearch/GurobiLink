@@ -161,11 +161,10 @@ Module[{error},
 GUROBILink::license = "Cannot find a valid GUROBI license for version 9.0 or greater." 
 
 (* Check for license, just once *)
-haveGUROBILicense = TrueQ[GUROBICheckLicense[]];
+hasGUROBILicense = TrueQ[GUROBICheckLicense[]];
 
 (* Register convex methods, only if license was found *)
-If[haveGUROBILicense,
-
+If[hasGUROBILicense,
 	(* Method "GUROBI1" is only for condstraints suppoted by GUROBI -- linear, quadratic and soc membership.
 		For general affine SOC constraints 'Ax+b in K', unless A is diagonal, use method "GUROBI",
 		or try Method -> {"GUROBI1", "NonConvex" -> 2} *)
@@ -177,7 +176,6 @@ If[haveGUROBILicense,
 			"MixedIntegerSupport"->True
 		]
 	];
-
 	(* "GUROBI" method Solves problems with linear or quadratic objective and
 		linear, quadratic and second order cone affine constraints.
 		In order to handle affine SOC constraints it adds new variables y = A.x+b *)
@@ -189,6 +187,8 @@ If[haveGUROBILicense,
 			"MixedIntegerSupport"->True
 		]
 	];
+	, (* else *)
+	GUROBIEnvironmentDelete[env];
 ];
 
 (* GUROBIData expression (GUROBISolMap) related: *)
