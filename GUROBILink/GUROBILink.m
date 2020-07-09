@@ -75,7 +75,7 @@ $GUROBIInfinity = 1.*10^30;
 LoadGUROBILink[] :=
 Block[{$LibraryPath = $targetDir}, 
 	Map[LibraryLoad, $GUROBILibrariesToPreload];
-	GUROBICheckLicense0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_CheckLicense", {}, Integer];
+	GUROBICheckLicense0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_CheckLicense", {Integer}, Integer];
 	GUROBICheckModel0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_CheckModel", {Integer}, Integer];
 	GUROBISetVariableTypesAndObjectiveVector0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetVariableTypesAndObjectiveVector", {Integer, {Integer, 1}, {Real, 1}}, Integer];
 	GUROBISetVariableTypesAndBoundsAndObjectiveVector0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetVariableTypesAndBoundsAndObjectiveVector", {Integer, UTF8String, {Real, 1}, {Real, 1}, {Real, 1}}, Integer];
@@ -138,13 +138,12 @@ If[!GUROBIEnvironmentQ[env],
 	dPrint[5, "GUROBI environment is still ", env];
 ];
 
-
 (* Check License *)
 
-GUROBICheckLicense[]:=
+GUROBICheckLicense[GUROBIEnvironment[id_]?(testGUROBIEnvironment[GUROBICheckLicense])]:=
 Module[{error},
 	dPrint[1, "Checking for GUROBI license..."];
-	error = GUROBICheckLicense0[];
+	error = GUROBICheckLicense0[id];
 	If[error === 0,
 		dPrint[1, "...................license found."];
 		True
@@ -161,7 +160,7 @@ Module[{error},
 GUROBILink::license = "Cannot find a valid GUROBI license for version 9.0 or greater." 
 
 (* Check for license, just once *)
-hasGUROBILicense = TrueQ[GUROBICheckLicense[]];
+hasGUROBILicense = TrueQ[GUROBICheckLicense[env]];
 
 (* Register convex methods, only if license was found *)
 If[hasGUROBILicense,
@@ -188,7 +187,7 @@ If[hasGUROBILicense,
 		]
 	];
 	, (* else *)
-	GUROBIEnvironmentDelete[env];
+	Clear[env];
 ];
 
 (* GUROBIData expression (GUROBISolMap) related: *)
@@ -392,20 +391,20 @@ Module[{tol, maxiter, nonconvex, mhead, verbose, status, error, data=GUROBIData[
 (* https://www.gurobi.com/documentation/9.0/refman/optimization_status_codes.html *)
 GUROBIStringStatus[data_] :=
 	Switch[GUROBIStatusValue[data],
-		1, "Loaded",
+		1, "NoSolutionAvailable",
 		2, "Solved",
 		3, "PrimalInfeasible",
 		4, "DualInfeasible",
 		5, "Unbounded",
-		6, "Cutoff",
+		6, "ObjectiveCutoffReached",
 		7, "MaxIterationsReached",
 		8, "NodeLimitReached",
 		9, "MaxCPUTimeReached",
 		10, "SolutionLimit",
 		11, "Interrupted",
-		12, "Numeric",
+		12, "NumericalError",
 		13, "Solved/Inaccurate",
-		14, "InProgress",
+		14, "AsynchronousOptimizationInProgress",
 		15, "ObjectiveLimitReached",
 		_, "Unknown"
 	]

@@ -38,13 +38,15 @@ EXTERN_C DLLEXPORT void WolframLibrary_uninitialize(WolframLibraryData libData)
 
 EXTERN_C DLLEXPORT int GUROBIData_CheckLicense(WolframLibraryData libData, mint Argc, MArgument* Args, MArgument Res)
 {
+	mint envID;
 	GUROBIEnvironment GUROBIenvironment;
 
-	// if (Argc != 0) {
-	//	return LIBRARY_FUNCTION_ERROR;
-	//}
+	if (Argc != 1) {
+		return LIBRARY_FUNCTION_ERROR;
+	}
 
-	GUROBIenvironment = GUROBIEnvironmentMap_get(1);
+	envID = MArgument_getInteger(Args[0]);
+	GUROBIenvironment = GUROBIEnvironmentMap_get(envID);
 
 	// load return values
 	MArgument_setInteger(Res, GUROBIenvironment->error);
