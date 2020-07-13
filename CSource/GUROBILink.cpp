@@ -189,49 +189,6 @@ EXTERN_C DLLEXPORT int GUROBIData_SetVariableTypesAndBoundsAndObjectiveVector(Wo
 	return LIBRARY_NO_ERROR;
 }
 
-/************************************************************************/
-/*	       SpArrayData: convenient data wrapper for MSparseArray        */
-/************************************************************************/
-typedef struct
-{
-	mint nentries;
-	mint rank;
-	mint const* dims;
-	mint* explicitPositions;
-	mreal* implicitValue;
-	mreal* explicitValues;
-} SpArrayData;
-
-SpArrayData SpArrayData_fromMSparseArray(WolframLibraryData libData, MSparseArray S, MTensor* pT1)
-{
-	WolframSparseLibrary_Functions spFuns = libData->sparseLibraryFunctions;
-	MTensor* pT = nullptr;
-	SpArrayData sad;
-	mint error;
-
-	sad.rank = (*(spFuns->MSparseArray_getRank))(S);
-	sad.dims = (*(spFuns->MSparseArray_getDimensions))(S);
-
-	pT = (*(spFuns->MSparseArray_getImplicitValue))(S);
-	sad.implicitValue = libData->MTensor_getRealData(*pT);
-
-	pT = (*(spFuns->MSparseArray_getExplicitValues))(S);
-	sad.explicitValues = libData->MTensor_getRealData(*pT);
-	if (*pT != nullptr)
-	{
-		sad.nentries = libData->MTensor_getFlattenedLength(*pT);
-	}
-	else
-	{
-		sad.nentries = 0;
-	}
-
-	error = (*(spFuns->MSparseArray_getExplicitPositions))(S, pT1);
-	sad.explicitPositions = libData->MTensor_getIntegerData(*pT1);
-
-	return sad;
-}
-
 /**********************************************************************/
 /*                GUROBIData_AddQuadraticObjectiveMatrix              */
 /*                                                                    */
@@ -242,34 +199,39 @@ SpArrayData SpArrayData_fromMSparseArray(WolframLibraryData libData, MSparseArra
 EXTERN_C DLLEXPORT int GUROBIData_AddQuadraticObjectiveMatrix(WolframLibraryData libData, mint Argc, MArgument* Args, MArgument Res)
 {
 	int error = 0, numquadnz, *quadrow = nullptr, *quadcol = nullptr;
-	double* quadval = nullptr;
-	mint i, dataID;
-	MTensor TQ = nullptr;
+	double *quadval = nullptr, *explicitValues = nullptr;
+	mint i, err, dataID, *explicitPositions;
+	MTensor *pT = nullptr, TQ = nullptr;
 	GUROBIData GUROBIdata;
-	SpArrayData Qmat;
-	MSparseArray QmatSA;
+	MSparseArray Qmat;
 
 	if (Argc != 2)
-	{
 		return LIBRARY_FUNCTION_ERROR;
-	}
 	dataID = MArgument_getInteger(Args[0]);
 	GUROBIdata = GUROBIDataMap_get(dataID);
 
-	QmatSA = MArgument_getMSparseArray(Args[1]);
-	Qmat = SpArrayData_fromMSparseArray(libData, QmatSA, &TQ);
-	numquadnz = (int)Qmat.nentries;
+	Qmat = MArgument_getMSparseArray(Args[1]);
+
+	pT = (*(libData->sparseLibraryFunctions->MSparseArray_getExplicitValues))(Qmat);
+	quadval = libData->MTensor_getRealData(*pT);
+	if (*pT != nullptr)
+		numquadnz = libData->MTensor_getFlattenedLength(*pT);
+	else
+		numquadnz = 0;
 
 	if (numquadnz > 0)
 	{
+		err = (*(libData->sparseLibraryFunctions->MSparseArray_getExplicitPositions))(Qmat, &TQ);
+		if (err)
+			return LIBRARY_FUNCTION_ERROR;
+		explicitPositions = libData->MTensor_getIntegerData(TQ);
+
 		quadrow = (int*)malloc(numquadnz * sizeof(int));
 		quadcol = (int*)malloc(numquadnz * sizeof(int));
-		quadval = (double*)malloc(numquadnz * sizeof(double));
 		for (i = 0; i < numquadnz; i++)
 		{
-			quadrow[i] = (int)Qmat.explicitPositions[2 * i] - 1;
-			quadcol[i] = (int)Qmat.explicitPositions[2 * i + 1] - 1;
-			quadval[i] = Qmat.explicitValues[i];
+			quadrow[i] = (int)explicitPositions[2 * i] - 1;
+			quadcol[i] = (int)explicitPositions[2 * i + 1] - 1;
 		}
 
 		error = GRBaddqpterms(GUROBIdata->model, numquadnz, quadrow, quadcol, quadval);
@@ -278,11 +240,9 @@ EXTERN_C DLLEXPORT int GUROBIData_AddQuadraticObjectiveMatrix(WolframLibraryData
 			free(quadrow);
 		if (quadcol)
 			free(quadcol);
-		if (quadval)
-			free(quadval);
 	}
 
-	// free stuff
+	// free more stuff
 	if (TQ)
 		libData->MTensor_free(TQ);
 
@@ -352,6 +312,49 @@ EXTERN_C DLLEXPORT int GUROBIData_AddLinearConstraint(WolframLibraryData libData
 }
 
 /************************************************************************/
+/*	       SpArrayData: convenient data wrapper for MSparseArray        */
+/************************************************************************/
+typedef struct
+{
+	mint nentries;
+	mint rank;
+	mint const* dims;
+	mint* explicitPositions;
+	mreal* implicitValue;
+	mreal* explicitValues;
+} SpArrayData;
+
+SpArrayData SpArrayData_fromMSparseArray(WolframLibraryData libData, MSparseArray S, MTensor* pT1)
+{
+	WolframSparseLibrary_Functions spFuns = libData->sparseLibraryFunctions;
+	MTensor* pT = nullptr;
+	SpArrayData sad;
+	mint error;
+
+	sad.rank = (*(spFuns->MSparseArray_getRank))(S);
+	sad.dims = (*(spFuns->MSparseArray_getDimensions))(S);
+
+	pT = (*(spFuns->MSparseArray_getImplicitValue))(S);
+	sad.implicitValue = libData->MTensor_getRealData(*pT);
+
+	pT = (*(spFuns->MSparseArray_getExplicitValues))(S);
+	sad.explicitValues = libData->MTensor_getRealData(*pT);
+	if (*pT != nullptr)
+	{
+		sad.nentries = libData->MTensor_getFlattenedLength(*pT);
+	}
+	else
+	{
+		sad.nentries = 0;
+	}
+
+	error = (*(spFuns->MSparseArray_getExplicitPositions))(S, pT1);
+	sad.explicitPositions = libData->MTensor_getIntegerData(*pT1);
+
+	return sad;
+}
+
+/************************************************************************/
 /*                GUROBIData_AddLinearConstraint1                       */
 /*                                                                      */
 /*         GUROBIAddLinearConstraint1[data, vec, sense, rhs]            */
@@ -382,12 +385,11 @@ EXTERN_C DLLEXPORT int GUROBIData_AddLinearConstraint1(WolframLibraryData libDat
 	vector = SpArrayData_fromMSparseArray(libData, vectorSA, &Tvec);
 	nz = (int)vector.nentries;
 	indices = (int*)malloc(nz * sizeof(int));
-	values = (double*)malloc(nz * sizeof(double));
 	for (i = 0; i < nz; i++)
 	{
 		indices[i] = (int)vector.explicitPositions[i] - 1;
-		values[i] = vector.explicitValues[i];
 	}
+	values = vector.explicitValues;
 
 	senseString = MArgument_getUTF8String(Args[2]);
 	sense = senseString[0];
@@ -409,8 +411,6 @@ EXTERN_C DLLEXPORT int GUROBIData_AddLinearConstraint1(WolframLibraryData libDat
 		libData->MTensor_free(Tvec);
 	if (indices)
 		free(indices);
-	if (values)
-		free(values);
 
 	// load return values
 	MArgument_setInteger(Res, (mint)error);
@@ -427,20 +427,16 @@ EXTERN_C DLLEXPORT int GUROBIData_AddLinearConstraint1(WolframLibraryData libDat
 
 EXTERN_C DLLEXPORT int GUROBIData_AddLinearConstraints(WolframLibraryData libData, mint Argc, MArgument* Args, MArgument Res)
 {
-	int error, ncons, Anz;
 	char sense, *senseString = nullptr, *sensevec = nullptr;
-	double *rhs = nullptr, *Ax = nullptr;
+	int error, ncons, Anz, *Ap = nullptr, *Ai = nullptr;
 	mint j, dataID, *idata = nullptr;
-	MTensor pT;
+	double *rhs = nullptr, *Ax = nullptr;
+	MTensor pT, *Tp = nullptr;
 	GUROBIData GUROBIdata;
 	MSparseArray AMat = nullptr;
-	MTensor* Tp = nullptr;
-	int *Ap = nullptr, *Ai = nullptr;
 
 	if (Argc != 4)
-	{
 		return LIBRARY_FUNCTION_ERROR;
-	}
 
 	dataID = MArgument_getInteger(Args[0]);
 	GUROBIdata = GUROBIDataMap_get(dataID);

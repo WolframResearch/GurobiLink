@@ -8,6 +8,7 @@ int GUROBIData_initialize(GUROBIData GUROBIdata)
 {
 	GUROBIdata->model = nullptr;
 	GUROBIdata->nvars = 0;
+	GUROBIdata->optstatus = 0;
 	GUROBIdata->error = 0;
 	return 0;
 }
