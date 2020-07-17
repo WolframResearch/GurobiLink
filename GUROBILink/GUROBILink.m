@@ -171,18 +171,42 @@ If[hasGUROBILicense,
 		Association[
 			"SolveFunction" -> GUROBISolve1,
 			"ObjectiveSupport" -> "Quadratic",
-			"ConicConstraintSupport" -> Thread[{"EqualityConstraint", "NonNegativeCone", "NormCone"}->"Affine"],
+			"ConstraintSupport" -> Association[{"EqualityConstraint" -> "Affine", "NonNegativeCone" -> "Affine",
+			"NormCone" -> "Affine", "QuadraticConstraint" -> "Affine"}],
 			"MixedIntegerSupport"->True
 		]
 	];
-	(* "GUROBI" method Solves problems with linear or quadratic objective and
+	(* "GUROBI" method solves problems with linear or quadratic objective and
 		linear, quadratic and second order cone affine constraints.
 		In order to handle affine SOC constraints it adds new variables y = A.x+b *)
 	Optimization`ConvexSolvers`RegisterConvexMethod["GUROBI",
 		Association[
 			"SolveFunction" -> GUROBISolve2,
 			"ObjectiveSupport" -> "Quadratic",
-			"ConicConstraintSupport" -> {"EqualityConstraint"->"Affine", "NonNegativeCone"->"Affine", "NormCone"->"Membership"},
+			"ConstraintSupport" -> Association[{"EqualityConstraint"->"Affine", "NonNegativeCone"->"Affine",
+			"NormCone"->"Membership", "QuadraticConstraint" -> "Affine"}],
+			"MixedIntegerSupport"->True
+		]
+	];
+
+	(* Method "GUROBI3" is only for problems with linear or quadratic objective and
+	linear or SOC membership constraints. *)
+	Optimization`ConvexSolvers`RegisterConvexMethod["GUROBI3",
+		Association[
+			"SolveFunction" -> GUROBISolve3,
+			"ObjectiveSupport" -> "Quadratic",
+			"ConstraintSupport" -> AssociationThread[{"EqualityConstraint", "NonNegativeCone", "NormCone"}->"Affine"],
+			"MixedIntegerSupport"->True
+		]
+	];
+	(* "GUROBI4" method Solves problems with linear or quadratic objective and
+		linear, quadratic and second order cone affine constraints, but quadratic constraints are transformed to SOC.
+		In order to handle affine SOC constraints it adds new variables y = A.x+b *)
+	Optimization`ConvexSolvers`RegisterConvexMethod["GUROBI4",
+		Association[
+			"SolveFunction" -> GUROBISolve4,
+			"ObjectiveSupport" -> "Quadratic",
+			"ConstraintSupport" -> Association[{"EqualityConstraint"->"Affine", "NonNegativeCone"->"Affine", "NormCone"->"Membership"}],
 			"MixedIntegerSupport"->True
 		]
 	];
@@ -239,7 +263,7 @@ Module[{error},
 GUROBISetVariableTypesAndObjectiveVector[GUROBIData[id_]?(testGUROBIData[GUROBISetVariableTypesAndObjectiveVector]), intvars_, objvector_]:=
 Module[{},
 	dPrint[5, "Setting variable types and objective vector..."];
-	GUROBISetVariableTypesAndObjectiveVector0[id, intvars, objvector]
+	GUROBISetVariableTypesAndObjectiveVector0[id, intvars, Normal[objvector]]
 ];
 
 GUROBISetVariableTypesAndBoundsAndObjectiveVector[GUROBIData[id_]?(testGUROBIData[GUROBISetVariableTypesAndBoundsAndObjectiveVector]), vartypes_, lb_, ub_, objvector_]:=
@@ -465,29 +489,36 @@ Module[{data, objvec, objmat, ncons, affine, coneSpecifications, lpos, intvars, 
 	dPrint[3, "coneSpecifications: ", coneSpecifications];
 
 	(* "EqualityConstraint" will always come first, then "NonNegativeCone",
-		then any number of "NormCone"s *)
+		any number of "NormCone"s, any number of quadratic constraints *)
 	lpos = 1;
-	If[ncons>=1 && MatchQ[coneSpecifications[[1]],{"EqualityConstraint", _}],
+	If[ncons>=1 && MatchQ[coneSpecifications[[1]], {"EqualityConstraint", _}],
 		{a, b} = affine[[1]];
 		dPrint[5, "eq {a, b} -> ", {a, b}];
 		error = GUROBIAddLinearConstraints[data, SparseArray[a], "=", -b];
 		If[error=!=0, Return[$Failed]];
 		lpos = 2;
 	];
-	If[ncons>=lpos && MatchQ[coneSpecifications[[lpos]],{"NonNegativeCone", _}],
+	If[ncons>=lpos && MatchQ[coneSpecifications[[lpos]], {"NonNegativeCone", _}],
 		{a, b} = affine[[lpos]];
 		dPrint[5, "ineq {a, b}-> ", {a, b}];
 		error = GUROBIAddLinearConstraints[data, SparseArray[a], ">", -b];
 		If[error=!=0, Return[$Failed]];
 		lpos += 1;
 	];
-	Do[
-		{a, b} = affine[[i]];
-		dPrint[5, "norm {a, b}-> ", {a, b}];
-		error = GUROBIAddSOCAffineConstraint[data, a, b];
-		If[error=!=0, Return[$Failed]];,
-	{i, lpos, ncons}];
-	pPrint[5, "Setting up the GUROBI problem"];
+	While[ncons>=lpos && MatchQ[coneSpecifications[[lpos]], {"NormCone", _}],
+			{a, b} = affine[[lpos]];
+			dPrint[5, "norm {a, b}-> ", {a, b}];
+			error = GUROBIAddSOCAffineConstraint[data, a, b];
+			If[error=!=0, Return[$Failed]];
+			lpos += 1;
+	];
+	While[ncons>=lpos && MatchQ[coneSpecifications[[lpos]], "QuadraticConstraint"],
+			{q, c, d} = affine[[lpos]];
+			dPrint[5, "quad {q, c, d}-> ", {q, c, d}];
+			error = GUROBIAddQuadraticConstraint[data, SparseArray[q], SparseArray[c], "<", -d];
+			If[error=!=0, Return[$Failed]];
+			lpos += 1;
+	];
 
 	status = GUROBIOptimize[data, pmopts];
 	status = GUROBIStringStatus[data];
@@ -539,6 +570,179 @@ Module[{a, b, objvec, data, nvars, status, lpos, nextra, norig, integerColumns,
 	dPrint[5, "coneVariableIndexes: ", coneVariableIndexes];
 
 	integerColumns = problemData["IntegerVariableColumns"];
+	dPrint[5, "integerColumns: ", integerColumns];
+	pPrint[5, "Setting up GUROBI: get problem data"];
+
+	error = GUROBISetVariableTypesAndObjectiveVector[data, integerColumns, objvec];
+	If[error=!=0, Return[$Failed]];
+	pPrint[5, "Setting up GUROBI: set vars and linear objective"];
+
+	error = GUROBIAddQuadraticObjectiveMatrix[data, SparseArray[objmat]];
+	If[error=!=0, Return[$Failed]];
+	pPrint[5, "Setting up GUROBI: set quad objective"];
+
+	(* "EqualityConstraint" will always come first, then "NonNegativeCone",
+		any number of "NormCone"s, any number of quadratic constraints *)
+	lpos = 1;
+	If[ncons >= 1 && MatchQ[coneSpecifications[[1]],{"EqualityConstraint", _}],
+		{a, b} = affine[[1]];
+		error = GUROBIAddLinearConstraints[data, SparseArray[a], "=", -b];
+		If[error=!=0, Return[$Failed]];
+		lpos = 2;
+	];
+
+	If[ncons >= lpos && MatchQ[coneSpecifications[[lpos]],{"NonNegativeCone", _}],
+		{a, b} = affine[[lpos]];
+		error = GUROBIAddLinearConstraints[data, SparseArray[a], ">", -b];
+		If[error=!=0, Return[$Failed]];
+		lpos += 1;
+	];
+	pPrint[5, "Setting up GUROBI: set linear constraints"];
+
+	While[ncons>=lpos && MatchQ[coneSpecifications[[lpos]], {"NormCone", _}],
+			dPrint[5, "NormCone indices-> ", coneVariableIndexes[[lpos]]];
+			error = GUROBIAddSOCMembershipConstraint[data, coneVariableIndexes[[lpos]]];
+			If[error=!=0, Return[$Failed]];
+			lpos += 1;
+	];
+	pPrint[5, "Setting up GUROBI: set SOC constraints"];
+
+	While[ncons>=lpos && MatchQ[coneSpecifications[[lpos]], "QuadraticConstraint"],
+			{q, c, d} = affine[[lpos]];
+			dPrint[5, "quad {q, c, d}-> ", {q, c, d}];
+			error = GUROBIAddQuadraticConstraint[data, SparseArray[q], SparseArray[c], "<", -d];
+			If[error=!=0, Return[$Failed]];
+			lpos += 1;
+	];
+	pPrint[5, "Setting up GUROBI: set quadratic constraints"];
+
+	(* GUROBISolve: *)
+	status = GUROBIOptimize[data, pmopts];
+	status = GUROBIStringStatus[data];
+	If[!StringQ[status], Return[$Failed]];
+	status = Optimization`SolutionData`WrapStatus[status];
+	(*Print["obj val: ", GUROBIObjectiveValue[data]];
+	Print["x: ",GUROBIx[data]];*)
+
+	{status, GUROBI2Data[data, {integerColumns}]}
+];
+
+GUROBI2Data[data_, _]["PrimalMinimumValue"] := GUROBIObjectiveValue[data];
+GUROBI2Data[data_, {integerColumns_}]["PrimalMinimizerVector"] :=
+Block[{x = GUROBIx[data], res},
+	If[Length[integerColumns] > 0,
+		x[[integerColumns]] = Round[x[[integerColumns]]]
+	];
+	x
+];
+GUROBI2Data[data_, _]["DualMaximumValue"] := Missing["NotAvailable"];
+GUROBI2Data[data_, _]["DualityGap"] := Missing["NotAvailable"];
+GUROBI2Data[data_, _]["DualMaximizer"] := Missing["NotAvailable"];
+GUROBI2Data[data_, _]["Slack"] := Missing["NotAvailable"];
+
+GUROBISolve3[problemData_, pmopts___] :=
+Module[{data, objvec, objmat, ncons, affine, coneSpecifications, lpos, intvars, error},
+
+	pReset[5];
+	dPrint[1, "In GUROBISolve3"];
+	dPrint[3, "pmopts: ", pmopts];
+
+	data = GUROBIDataCreate[];
+	If[!GUROBIDataQ[data], Return[$Failed]];
+	If[!GUROBICheckModel[data], Return[$Failed]];
+
+	objvec = problemData["ObjectiveVector"];
+
+	objmat = problemData["ObjectiveMatrix"];
+	intvars = problemData["IntegerVariableColumns"];
+	dPrint[3, "intvars: ", intvars];
+
+	error = GUROBISetVariableTypesAndObjectiveVector[data, intvars, objvec];
+	If[error=!=0, Return[$Failed]];
+
+	error = GUROBIAddQuadraticObjectiveMatrix[data, SparseArray[objmat]];
+	If[error=!=0, Return[$Failed]];
+
+	affine = problemData["ConicConstraintAffineLists"];
+	coneSpecifications = problemData["ConicConstraintConeSpecifications"];
+	ncons = Length[coneSpecifications];
+	dPrint[3, "coneSpecifications: ", coneSpecifications];
+
+	(* "EqualityConstraint" will always come first, then "NonNegativeCone",
+		then any number of "NormCone"s *)
+	lpos = 1;
+	If[ncons>=1 && MatchQ[coneSpecifications[[1]],{"EqualityConstraint", _}],
+		{a, b} = affine[[1]];
+		dPrint[5, "eq {a, b} -> ", {a, b}];
+		error = GUROBIAddLinearConstraints[data, SparseArray[a], "=", -b];
+		If[error=!=0, Return[$Failed]];
+		lpos = 2;
+	];
+	If[ncons>=lpos && MatchQ[coneSpecifications[[lpos]],{"NonNegativeCone", _}],
+		{a, b} = affine[[lpos]];
+		dPrint[5, "ineq {a, b}-> ", {a, b}];
+		error = GUROBIAddLinearConstraints[data, SparseArray[a], ">", -b];
+		If[error=!=0, Return[$Failed]];
+		lpos += 1;
+	];
+	Do[
+		{a, b} = affine[[i]];
+		dPrint[5, "norm {a, b}-> ", {a, b}];
+		error = GUROBIAddSOCAffineConstraint[data, a, b];
+		If[error=!=0, Return[$Failed]];,
+	{i, lpos, ncons}];
+	pPrint[5, "Setting up the GUROBI problem"];
+
+	status = GUROBIOptimize[data, pmopts];
+	status = GUROBIStringStatus[data];
+	If[!StringQ[status], Return[$Failed]];
+	status = Optimization`SolutionData`WrapStatus[status];
+	(*Print["obj val: ", GUROBIObjectiveValue[data]];
+	Print["x: ",GUROBIx[data]];*)
+
+	dPrint[1, "status: ", status];
+	{status, GUROBI3Data[data, {}]}
+]
+
+GUROBI3Data[data_, _]["PrimalMinimumValue"] := GUROBIObjectiveValue[data];
+GUROBI3Data[data_, _]["PrimalMinimizerVector"] := GUROBIx[data];
+GUROBI3Data[data_, _]["Slack"] := Missing["NotAvailable"];
+GUROBI3Data[data_, _]["DualMaximumValue"] := Missing["NotAvailable"];
+GUROBI3Data[data_, _]["DualityGap"] := Missing["NotAvailable"];
+GUROBI3Data[data_, _]["DualMaximizer"] := Missing["NotAvailable"];
+
+GUROBISolve4[problemData_, pmopts___] :=
+Module[{a, b, objvec, data, nvars, status, lpos, nextra, norig, integerColumns,
+	affine, coneSpecifications, coneVariableIndexes},
+	(* For old GUROBI with quadratic->SOC*)
+
+	dPrint[1, "In GUROBISolve4"];
+	dPrint[3, "pmopts: ", pmopts];
+	pReset[5];
+
+	data = GUROBIDataCreate[];
+	If[!GUROBIDataQ[data], Return[$Failed]];
+	If[!GUROBICheckModel[data], Return[$Failed]];
+
+	pPrint[5, "Setting up GUROBI: create and check data"];
+	objvec = problemData["ObjectiveVector"];
+	nvars = Length[objvec];
+	objmat = problemData["ObjectiveMatrix"];
+	nextra = Lookup[problemData, "ExtraColumns", 0];
+	norig = nvars - nextra;
+	affine = problemData["ConicConstraintAffineLists"];
+	coneSpecifications = problemData["ConicConstraintConeSpecifications"];
+	ncons = Length[coneSpecifications];
+	coneVariableIndexes = problemData["ConeVariableColumns"];
+
+	dPrint[5, "objvec: ", objvec];
+	dPrint[5, "affine: ", affine];
+	dPrint[3, "coneSpecifications: ", coneSpecifications];
+	dPrint[3, "ncons: ", ncons];
+	If[MatchQ[coneVariableIndexes, _Missing], coneVariableIndexes = ConstantArray[None, ncons]];
+	dPrint[5, "coneVariableIndexes: ", coneVariableIndexes];
+
+	integerColumns = problemData["IntegerVariableColumns"];
 	pPrint[5, "Setting up GUROBI: get problem data"];
 
 	error = GUROBISetVariableTypesAndObjectiveVector[data, integerColumns, objvec];
@@ -579,21 +783,21 @@ Module[{a, b, objvec, data, nvars, status, lpos, nextra, norig, integerColumns,
 	(*Print["obj val: ", GUROBIObjectiveValue[data]];
 	Print["x: ",GUROBIx[data]];*)
 
-	{status, GUROBI2Data[data, {integerColumns}]}
+	{status, GUROBI4Data[data, {integerColumns}]}
 ];
 
-GUROBI2Data[data_, _]["PrimalMinimumValue"] := GUROBIObjectiveValue[data];
-GUROBI2Data[data_, {integerColumns_}]["PrimalMinimizerVector"] := 
+GUROBI4Data[data_, _]["PrimalMinimumValue"] := GUROBIObjectiveValue[data];
+GUROBI4Data[data_, {integerColumns_}]["PrimalMinimizerVector"] :=
 Block[{x = GUROBIx[data], res},
 	If[Length[integerColumns] > 0,
 		x[[integerColumns]] = Round[x[[integerColumns]]]
 	];
 	x
 ];
-GUROBI2Data[data_, _]["DualMaximumValue"] := Missing["NotAvailable"];
-GUROBI2Data[data_, _]["DualityGap"] := Missing["NotAvailable"];
-GUROBI2Data[data_, _]["DualMaximizer"] := Missing["NotAvailable"];
-GUROBI2Data[data_, _]["Slack"] := Missing["NotAvailable"];
+GUROBI4Data[data_, _]["DualMaximumValue"] := Missing["NotAvailable"];
+GUROBI4Data[data_, _]["DualityGap"] := Missing["NotAvailable"];
+GUROBI4Data[data_, _]["DualMaximizer"] := Missing["NotAvailable"];
+GUROBI4Data[data_, _]["Slack"] := Missing["NotAvailable"];
 
 End[]
 EndPackage[]
