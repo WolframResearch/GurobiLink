@@ -32,6 +32,7 @@ elseif(APPLE)
     set(SYSTEMID MacOSX-x86-64)
     set(PLATFORM mac64)
     set(GUROBI_LIB libgurobi90.dylib)
+    set(GUROBI_LIB_INSTALL_NAME_PATH /Library/gurobi902/mac64/lib)
     set(GUROBI_DLL ${GUROBI_LIB})
 elseif(UNIX)
     set(SYSTEMID Linux-x86-64)
@@ -76,7 +77,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 
 if(APPLE)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND install_name_tool -change ${GUROBI_LIB} @loader_path/${GUROBI_LIB} $<TARGET_FILE_NAME:${PROJECT_NAME}>
+        COMMAND install_name_tool -change ${GUROBI_LIB_INSTALL_NAME_PATH}/${GUROBI_LIB} @loader_path/${GUROBI_LIB} $<TARGET_FILE_NAME:${PROJECT_NAME}>
         COMMENT "Setting rpath for ${GUROBI_LIB}"
     )
 endif()
