@@ -292,7 +292,7 @@ Module[{},
 GUROBIAddLinearConstraints[GUROBIData[id_]?(testGUROBIData[GUROBIDataDelete]), mat_SparseArray, sense_, rhs_]:=
 Module[{},
 	dPrint[5, xGUROBIAddLinearConstraints0[id, mat, sense, rhs]];
-	GUROBIAddLinearConstraints0[id, mat, sense, rhs]
+	GUROBIAddLinearConstraints0[id, SparseArray[mat], sense, Normal[rhs]]
 ];
 
 GUROBIAddQuadraticConstraintIndices[GUROBIData[id_]?(testGUROBIData[GUROBIAddQuadraticConstraint]), linind_, linvals_, quadrow_, quadcol_, quadvals_, sense_, rhs_] :=
@@ -494,14 +494,14 @@ Module[{data, objvec, objmat, ncons, affine, coneSpecifications, lpos, intvars, 
 	If[ncons>=1 && MatchQ[coneSpecifications[[1]], {"EqualityConstraint", _}],
 		{a, b} = affine[[1]];
 		dPrint[5, "eq {a, b} -> ", {a, b}];
-		error = GUROBIAddLinearConstraints[data, SparseArray[a], "=", -b];
+		error = GUROBIAddLinearConstraints[data, a, "=", -b];
 		If[error=!=0, Return[$Failed]];
 		lpos = 2;
 	];
 	If[ncons>=lpos && MatchQ[coneSpecifications[[lpos]], {"NonNegativeCone", _}],
 		{a, b} = affine[[lpos]];
 		dPrint[5, "ineq {a, b}-> ", {a, b}];
-		error = GUROBIAddLinearConstraints[data, SparseArray[a], ">", -b];
+		error = GUROBIAddLinearConstraints[data, a, ">", -b];
 		If[error=!=0, Return[$Failed]];
 		lpos += 1;
 	];
