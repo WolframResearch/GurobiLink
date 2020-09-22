@@ -1,0 +1,15 @@
+Paclet[
+	"Name" -> "${PROJECT_NAME}",
+	"Version" -> "0.0.1",
+	"WolframVersion" -> "${TARGET_WOLFRAM_VERSION}",
+	"AutoUpdating" -> True,
+	"SystemID" -> "${SYSTEMID}",
+	"Qualifier" -> "${QUALIFIER}",
+	"Extensions" ->
+		{
+			{
+				"Kernel",
+					"Context" -> "${PROJECT_NAME}`"
+			}
+		}
+]

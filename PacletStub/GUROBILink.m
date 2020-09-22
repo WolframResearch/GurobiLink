@@ -1,0 +1,3 @@
+BeginPackage["GUROBILink`"]
+
+EndPackage[]
