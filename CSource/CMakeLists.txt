@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.13)
 project(GUROBILink)
 
+string(TIMESTAMP BUILD_TIME "%d %b %Y at %H:%M")
+
 set(GUROBI_VERSION "9.0.2" CACHE STRING "GUROBI version")
 set(GUROBI_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../Libraries/Gurobi/${GUROBI_VERSION}" CACHE PATH "GUROBI installation")
 

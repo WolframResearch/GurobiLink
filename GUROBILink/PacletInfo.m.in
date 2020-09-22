@@ -1,3 +1,5 @@
+(* Built on ${BUILD_TIME} *)
+
 Paclet[
 	"Name" -> "${PROJECT_NAME}",
 	"Version" -> "${PACLET_VERSION}",
