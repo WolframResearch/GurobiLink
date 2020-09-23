@@ -323,7 +323,7 @@ Module[{n, Q, q, b1, psd},
 	b1 = -Sum[b[[i]]^2, {i, 1, n-1}] + b[[n]]^2;
 	q = 2*(Sum[b[[i]]*A[[i]], {i, 1, n-1}] - b[[n]]*A[[n]]);
 	If[!DiagonalMatrixQ[A] && !PositiveSemidefiniteMatrixQ[Q],
-		dPrint[3, "Matrix Q is not positive semidefinite and matrix A is not diagonal."]
+		dPrint[3, "Matrix Q is not positive semidefinite and matrix A is not diagonal."];
 		Message[GUROBILink::badmethod];
 	];
 	dPrint[5, xGUROBIAddQuadraticConstraint1[id, SparseArray[Q], SparseArray[q], "<", b1]];
