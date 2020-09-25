@@ -71,60 +71,63 @@ set(GUROBILINK_SOURCES
 	GUROBISolution.cpp
 )
 
-set(PACLET_ROOT ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME})
-set(PACLET_LIBDIR ${PACLET_ROOT}/LibraryResources/${SYSTEMID})
+function(copy_wl_sources SRC DEST)
+	string(RANDOM temp)
+	configure_file(
+		${SRC}/PacletInfo.m.in
+		${CMAKE_BINARY_DIR}/generated/${temp}/PacletInfo.m
+	)
+	set(WL_SOURCES
+		${SRC}/${PROJECT_NAME}.m
+		${CMAKE_BINARY_DIR}/generated/${temp}/PacletInfo.m
+		)
+	install(FILES
+		${WL_SOURCES}
+		DESTINATION ${DEST}
+		)
+endfunction()
 
 if(BUILD_STUB)
-	set(WL_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../PacletStub)
-else()
-	set(WL_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../${PROJECT_NAME})
+	set(STUB_DESTINATION ${CMAKE_INSTALL_PREFIX}/stub CACHE PATH "Stub build destination")
+	copy_wl_sources(${CMAKE_CURRENT_SOURCE_DIR}/../PacletStub ${STUB_DESTINATION}/${PROJECT_NAME} )
+	set(FULL full)
+endif()
 
-	add_library(${PROJECT_NAME} SHARED ${GUROBILINK_SOURCES})
-	set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
-	target_include_directories(${PROJECT_NAME} PRIVATE
-		${CMAKE_SOURCE_DIR}
-		${GUROBI_INCLUDE_PATH}
-		${WOLFRAM_INCLUDE_PATH}
-		)
-	target_link_directories(${PROJECT_NAME} PRIVATE ${GUROBI_LIBRARY_PATH})
-	target_link_libraries(${PROJECT_NAME} PRIVATE ${GUROBI_LIB})
-	target_compile_definitions(${PROJECT_NAME} PRIVATE "$<$<CONFIG:DEBUG>:DEBUG>")
+set(PACLET_DESTINATION ${CMAKE_INSTALL_PREFIX}/${FULL} CACHE PATH "Full build destination")
+set(PACLET_LIBDIR ${PACLET_DESTINATION}/${PROJECT_NAME}/LibraryResources/${SYSTEMID})
 
-	if(APPLE)
-		add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-			COMMAND install_name_tool -change ${GUROBI_LIB_INSTALL_NAME_PATH}/${GUROBI_LIB} @loader_path/${GUROBI_LIB} $<TARGET_FILE_NAME:${PROJECT_NAME}>
-			COMMENT "Setting rpath for ${GUROBI_LIB}"
-		)
-	endif()
 
-	install(TARGETS ${PROJECT_NAME}
-			LIBRARY DESTINATION ${PACLET_LIBDIR}
-			RUNTIME DESTINATION ${PACLET_LIBDIR}
+
+add_library(${PROJECT_NAME} SHARED ${GUROBILINK_SOURCES})
+set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
+target_include_directories(${PROJECT_NAME} PRIVATE
+	${CMAKE_SOURCE_DIR}
+	${GUROBI_INCLUDE_PATH}
+	${WOLFRAM_INCLUDE_PATH}
 	)
+target_link_directories(${PROJECT_NAME} PRIVATE ${GUROBI_LIBRARY_PATH})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${GUROBI_LIB})
+target_compile_definitions(${PROJECT_NAME} PRIVATE "$<$<CONFIG:DEBUG>:DEBUG>")
 
-	install(FILES
-		${GUROBI_DLL_PATH}/${GUROBI_DLL}
-		DESTINATION ${PACLET_LIBDIR}
+if(APPLE)
+	add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+		COMMAND install_name_tool -change ${GUROBI_LIB_INSTALL_NAME_PATH}/${GUROBI_LIB} @loader_path/${GUROBI_LIB} $<TARGET_FILE_NAME:${PROJECT_NAME}>
+		COMMENT "Setting rpath for ${GUROBI_LIB}"
 	)
+endif()
 
-	if(INSTALL_PDB)
-		install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${PACLET_LIBDIR} OPTIONAL)
-	endif()
-endif(BUILD_STUB)
-
-configure_file(
-	${WL_ROOT}/PacletInfo.m.in
-	${CMAKE_BINARY_DIR}/generated/PacletInfo.m
-	)
-
-set(WL_SOURCES
-	${WL_ROOT}/${PROJECT_NAME}.m
-	${CMAKE_BINARY_DIR}/generated/PacletInfo.m
-	)
+install(TARGETS ${PROJECT_NAME}
+		LIBRARY DESTINATION ${PACLET_LIBDIR}
+		RUNTIME DESTINATION ${PACLET_LIBDIR}
+)
 
 install(FILES
-	${WL_SOURCES}
-	DESTINATION ${PACLET_ROOT}
-	)
+	${GUROBI_DLL_PATH}/${GUROBI_DLL}
+	DESTINATION ${PACLET_LIBDIR}
+)
 
+if(INSTALL_PDB)
+	install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${PACLET_LIBDIR} OPTIONAL)
+endif()
 
+copy_wl_sources(${CMAKE_CURRENT_SOURCE_DIR}/../${PROJECT_NAME} ${PACLET_DESTINATION}/${PROJECT_NAME})
