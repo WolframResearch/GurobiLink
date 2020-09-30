@@ -39,63 +39,55 @@
 			<matches pattern="Windows" string="${system_id}"/>
 		</condition>
 		<mkdir dir='${library.makefiles.dir}'/>
-
-		<echo message='${line.separator}
-		${cmake.exe}${line.separator}
-		-DWOLFRAM_INCLUDE_PATH=${checkout_directory}/RuntimeLibrary/${system_id}${line.separator}
-		-DCMAKE_BUILD_TYPE=Release${line.separator}
-		-DCMAKE_BUILD_TYPE:STRING=Release${line.separator}
-		-DCMAKE_INSTALL_PREFIX=${files_directory}${line.separator}
-		${cmake.generator}${line.separator}
-		${checkout_directory}/GUROBILink/CSource${line.separator}'/>
-
-
-		<exec dir='${library.makefiles.dir}' executable='${cmake.exe}' failonerror='true'>
+		
+		<property name='install_dir' value='${checkout_directory}/re_install'  />
+		
+		<re-cmake-exec dir='${library.makefiles.dir}' >
 			<arg line='-DWOLFRAM_INCLUDE_PATH=${checkout_directory}/RuntimeLibrary/${system_id}'/>
 			<arg line='-DCMAKE_BUILD_TYPE=Release'/>
-			<arg line='-DCMAKE_INSTALL_PREFIX=${files_directory}'/>
+			<arg line='-DBUILD_STUB=ON' />
+			<arg line='-DCMAKE_INSTALL_PREFIX=${install_dir}'/>
 			<arg line='${cmake.generator}'/>
 			<arg value='${checkout_directory}/GUROBILink/CSource'/>
-		</exec>
+		</re-cmake-exec>
 
-		<exec dir='${library.makefiles.dir}' executable='${cmake.exe}' failonerror='true' searchpath='true'>
-			<arg line='--build .'/>
+		<re-cmake-exec dir='${library.makefiles.dir}' >
+			<arg line='--build ${library.makefiles.dir}'/>
 			<arg line='--target install'/>
 			<arg line='--config Release'/>
-		</exec>
+			<arg line='--parallel' />
+		</re-cmake-exec>
 
+		<copy todir='${files_directory}'>
+			<fileset dir='${install_dir}/stub'>
+				<include name='**/**' />
+			</fileset>
+		</copy>
 
 	</target>
 
-	<target name='NativeLibrary.GUROBILink.MacOSX-x86-64.postbuild' extensionOf='NativeLibrary.postbuild' if='is.osx'>
+	<target name='GUROBILink.chmod' unless='is.windows'>
 
-		<sign dir='${files_directory}'>
-			<include name='**/*.dylib'/>
+		<chmod dir='${install_dir}/full/${component}/LibraryResources/${system_id}' perm='u=rwx,g=rx,o=rx'>
+			<include name='*.dylib' />
+			<include name='*.so' />
+		</chmod>
+
+	</target>
+
+	<target name='GUROBILink.sign' unless='is.unix'>
+
+		<sign dir='${install_dir}/full'>
+			<include name='**/*.dylib' if='is.osx' />
+			<include name='**/*.dll' if='is.windows' />
 		</sign>
 
 	</target>
+	
+	<target name='NativeLibrary.GUROBILink.paclet.postbuild' depends='GUROBILink.chmod,GUROBILink.sign' extensionOf='NativeLibrary.postbuild'>
 
-	<target name='NativeLibrary.GUROBILink.Windows-x86-64.postbuild' extensionOf='NativeLibrary.postbuild'
-			if='is.windows'>
-
-		<sign dir='${files_directory}'>
-			<include name='**/*.dll'/>
-			<include name='**/*.exe'/>
-			<include name='**/*.lib'/>
-		</sign>
+		<paclet src='${install_dir}/full/${component}' dest='${output_directory}'/>
 
 	</target>
-
-	<target name='Paclet.GUROBILink.init.custom' extensionOf='Paclet.init.custom'>
-
-		<!--
-		 Prevent Paclet.clean from deleting files_directory,
-		 since CopyAndUnarchiveArtifact just put all the paclet
-		 files in there....
-		 -->
-
-		<property name='keep.files_directory' value='true'/>
-
-	</target>
-
+	
 </project>
