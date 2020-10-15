@@ -58,12 +58,6 @@
 			<arg line='--parallel' />
 		</re-cmake-exec>
 
-		<copy todir='${files_directory}'>
-			<fileset dir='${install_dir}/stub'>
-				<include name='**/**' />
-			</fileset>
-		</copy>
-
 	</target>
 
 	<target name='GUROBILink.chmod' unless='is.windows'>
@@ -84,10 +78,13 @@
 
 	</target>
 	
-	<target name='NativeLibrary.GUROBILink.paclet.postbuild' depends='GUROBILink.chmod,GUROBILink.sign' extensionOf='NativeLibrary.postbuild'>
+	<target name='NativeLibrary.GUROBILink.postbuild' depends='GUROBILink.chmod,GUROBILink.sign' extensionOf='NativeLibrary.postbuild'>
 
-		<paclet src='${install_dir}/full/${component}' dest='${output_directory}'/>
-
+		<copy todir='${files_directory}'>
+			<fileset dir='${install_dir}/full'>
+				<include name='**/**' />
+			</fileset>
+		</copy>
 	</target>
 	
 </project>
