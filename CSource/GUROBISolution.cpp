@@ -26,6 +26,7 @@ GUROBIData GUROBIData_new()
 	GUROBIdata = (GUROBIData)malloc(sizeof(*GUROBIdata));
 	GUROBIData_initialize(GUROBIdata);
 	GUROBIEnvironment GUROBIenvironment = GUROBIEnvironmentMap_get(1);
+	/* Create new model with 0 variables, no problem info yet */
 	GUROBIdata->error =
 		GRBnewmodel(GUROBIenvironment->env, &(GUROBIdata->model), "Mo", 0, nullptr, nullptr, nullptr, nullptr, nullptr);
 	return GUROBIdata;
@@ -39,8 +40,7 @@ GUROBIEnvironment GUROBIEnvironment_new()
 	GUROBIenvironment->error = GRBemptyenv(&(GUROBIenvironment->env));
 	if (!GUROBIenvironment->error)
 	{
-		/* 0 variables, no problem info yet */
-		GUROBIenvironment->error = GRBsetstrparam(GUROBIenvironment->env, "LogFile", "Mo.log");
+		// GUROBIenvironment->error = GRBsetstrparam(GUROBIenvironment->env, "LogFile", "Mo.log");
 		GUROBIenvironment->error = GRBstartenv(GUROBIenvironment->env);
 	}
 	return GUROBIenvironment;

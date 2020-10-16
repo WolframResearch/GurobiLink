@@ -35,10 +35,6 @@ GUROBIDataDelete::usage = "GUROBIDataDelete[data] removes an instance of an GURO
 GUROBIEnvironmentCreate::usage = "env = GUROBIEnvironmentCreate[] creates GUROBI environment."
 GUROBIEnvironmentDelete::usage = "GUROBIEnvironmentDelete[env] deletes GUROBI environment."
 
-(*TODO:
-add statuses to kernel
-*) 
-
 Begin["`Private`"]
 (* Implementation of the package *)
 
@@ -335,17 +331,17 @@ It is better to use method \"GUROBI\" instead. \
 If looking for adventure, try Method -> {\"GUROBI1\", \"NonConvex\" -> 2}."
 
 GUROBISetNumberOfConstraints[GUROBIData[id_]?(testGUROBIData[GUROBISetNumberOfConstraints]), ncons_]:=
-Module[{},
-	GUROBISetNumberOfConstraints0[id, ncons];
+Module[{error},
+	error = GUROBISetNumberOfConstraints0[id, ncons];
 ]
 
 GUROBISetParameters[GUROBIData[id_]?(testGUROBIData[GUROBISetNumberOfConstraints]), maxit_, tol_, nonconvex_]:=
-Module[{},
+Module[{error},
 	error = GUROBISetParameters0[id, maxit, tol, nonconvex]
 ]
 
 GUROBISetStartingPoint[GUROBIData[id_]?(testGUROBIData[GUROBISetNumberOfConstraints]), startpt_]:=
-Module[{},
+Module[{error},
 	error = GUROBISetStartingPoint0[id, N[startpt]];
 ]
 
@@ -358,7 +354,7 @@ Options[GUROBIOptimize] = {Method->Automatic, MaxIterations->Automatic, Toleranc
 	PerformanceGoal:>$PerformanceGoal, WorkingPrecision->MachinePrecision}
 
 GUROBIOptimize[GUROBIData[id_]?(testGUROBIData[GUROBIOptimize]), OptionsPattern[GUROBIOptimize]] :=
-Module[{tol, maxiter, nonconvex, mhead, verbose, status, error, data=GUROBIData[id]},
+Module[{tol, maxiter, nonconvex, mhead, verbose, status, error, startpt, data=GUROBIData[id]},
 	dPrint[3, "In GUROBIOptimize"];
 	tol = OptionValue[Tolerance]; 
 	maxiter = OptionValue[MaxIterations];
@@ -440,7 +436,7 @@ GUROBISlack[GUROBIData[id_]?(testGUROBIData[GUROBISlack])] := GUROBISlack0[id];
 (* Method functions *)
 
 GUROBISolve1[problemData_, pmopts___] :=
-Module[{data, objvec, objmat, ncons, coefficients, coneSpecifications, lpos, intvars, error},
+Module[{a, b, c, d, q, data, objvec, objmat, ncons, coefficients, coneSpecifications, lpos, intvars, error, status},
 
 	pReset[5];
 	dPrint[1, "In GUROBISolve1"];
@@ -518,8 +514,8 @@ GUROBI1Data[data_, _]["DualityGap"] := Missing["NotAvailable"];
 GUROBI1Data[data_, _]["DualMaximizer"] := Missing["NotAvailable"];
 
 GUROBISolve2[problemData_, pmopts___] :=
-Module[{a, b, objvec, data, nvars, status, lpos, nextra, norig, integerColumns,
-	coefficients, coneSpecifications, coneVariableIndexes},
+Module[{a, b, c, d, q, objvec, objmat, data, nvars, status, lpos, nextra, norig, integerColumns,
+	coefficients, coeff, coneSpecifications, ncons, coneVariableIndexes, error},
 	(* For method GUROBI *)
 
 	dPrint[1, "In GUROBISolve2"];
@@ -563,17 +559,24 @@ Module[{a, b, objvec, data, nvars, status, lpos, nextra, norig, integerColumns,
 	(* "EqualityConstraint" will always come first, then "NonNegativeCone",
 		any number of "NormCone"s, any number of quadratic constraints *)
 	lpos = 1;
-	If[ncons >= 1 && MatchQ[coneSpecifications[[1]],{"EqualityConstraint", _}],
-		{b, a} = coefficients[[1]];
+	If[ncons >= 1 && MatchQ[coneSpecifications[[1]], {"EqualityConstraint", _}],
+		coeff = coefficients[[lpos]];
+		If[ListQ[coeff] && Length[coeff] === 2,
+			{b, a} = coefficients[[1]],
+			Return[$Failed]
+		];
 		error = GUROBIAddLinearConstraints[data, SparseArray[a], "=", -b];
 		If[error=!=0, Return[$Failed]];
 		lpos = 2;
 	];
-
-	If[ncons >= lpos && MatchQ[coneSpecifications[[lpos]],{"NonNegativeCone", _}],
-		{b, a} = coefficients[[lpos]];
+	If[ncons >= lpos && MatchQ[coneSpecifications[[lpos]], {"NonNegativeCone", _}],
+		coeff = coefficients[[lpos]];
+		If[ListQ[coeff] && Length[coeff] === 2,
+			{b, a} = coefficients[[lpos]],
+			Return[$Failed]
+		];
 		error = GUROBIAddLinearConstraints[data, SparseArray[a], ">", -b];
-		If[error=!=0, Return[$Failed]];
+		If[error =!= 0, Return[$Failed]];
 		lpos += 1;
 	];
 	pPrint[5, "Setting up GUROBI: set linear constraints"];
@@ -608,7 +611,7 @@ Module[{a, b, objvec, data, nvars, status, lpos, nextra, norig, integerColumns,
 
 GUROBI2Data[data_, _]["PrimalMinimumValue"] := GUROBIObjectiveValue[data];
 GUROBI2Data[data_, {integerColumns_}]["PrimalMinimizerVector"] :=
-Block[{x = GUROBIx[data], res},
+Block[{x = GUROBIx[data]},
 	If[Length[integerColumns] > 0,
 		x[[integerColumns]] = Round[x[[integerColumns]]]
 	];
