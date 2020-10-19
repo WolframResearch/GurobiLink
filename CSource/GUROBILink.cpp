@@ -25,7 +25,8 @@ EXTERN_C DLLEXPORT int WolframLibrary_initialize(WolframLibraryData libData)
 
 EXTERN_C DLLEXPORT void WolframLibrary_uninitialize(WolframLibraryData libData)
 {
-
+	// remove environment
+	GUROBIEnvironmentMap_manage(libData, 1, 1);
 	(*libData->unregisterLibraryCallbackManager)("GUROBI_data_instance_manager");
 	(*libData->unregisterLibraryCallbackManager)("GUROBI_environment_instance_manager");
 }
