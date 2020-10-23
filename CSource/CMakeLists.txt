@@ -9,7 +9,7 @@ set(GUROBI_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../Libraries/Gurobi/${GUROBI_VERSIO
 set(INSTALL_PDB OFF CACHE BOOL "Include PDB file in paclet layout")
 
 set(BUILD_STUB OFF CACHE BOOL "Build stub paclet")
-set(PACLET_VERSION 1.0.0 CACHE STRING "Paclet version")
+set(PACLET_VERSION 1.0.1 CACHE STRING "Paclet version")
 set(TARGET_WOLFRAM_VERSION 12.2+ CACHE STRING "Target Mathematica version")
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)

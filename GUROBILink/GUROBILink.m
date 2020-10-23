@@ -57,11 +57,6 @@ $GUROBILibrariesToPreload = Switch[$SystemID,
 dPrint = Optimization`Debug`OptimizationDebugPrint;
 pReset = Optimization`Debug`OptimizationProfileReset;
 pPrint = Optimization`Debug`OptimizationProfilePrint;
-(* Set print level 5 with Optimization`Debug`SetPrintLevel[5]
-   For GUROBILink only prints set:
-   GUROBILink`Private`dPrint = Print;*)
-(* Set profile print level 5 with Optimization`Debug`SetProfilePrintLevel[5]
-   and use Optimization`Debug`OptimizationProfile[...] *)
 
 needInitialization = True;
 
@@ -566,7 +561,7 @@ Module[{a, b, c, d, q, objvec, objmat, data, nvars, status, lpos, nextra, norig,
 			Return[$Failed]
 		];
 		error = GUROBIAddLinearConstraints[data, SparseArray[a], "=", -b];
-		If[error=!=0, Return[$Failed]];
+		If[error=!=0, dPrint[3, "add lin = error: ", error]; Return[$Failed]];
 		lpos = 2;
 	];
 	If[ncons >= lpos && MatchQ[coneSpecifications[[lpos]], {"NonNegativeCone", _}],
@@ -576,7 +571,7 @@ Module[{a, b, c, d, q, objvec, objmat, data, nvars, status, lpos, nextra, norig,
 			Return[$Failed]
 		];
 		error = GUROBIAddLinearConstraints[data, SparseArray[a], ">", -b];
-		If[error =!= 0, Return[$Failed]];
+		If[error =!= 0, dPrint[3, "add lin > error: ", error]; Return[$Failed]];
 		lpos += 1;
 	];
 	pPrint[5, "Setting up GUROBI: set linear constraints"];
@@ -584,7 +579,7 @@ Module[{a, b, c, d, q, objvec, objmat, data, nvars, status, lpos, nextra, norig,
 	While[ncons>=lpos && MatchQ[coneSpecifications[[lpos]], {"NormCone", _}],
 			dPrint[5, "NormCone indices-> ", coneVariableIndexes[[lpos]]];
 			error = GUROBIAddSOCMembershipConstraint[data, coneVariableIndexes[[lpos]]];
-			If[error=!=0, Return[$Failed]];
+			If[error=!=0, dPrint[3, "add soc const error: ", error]; Return[$Failed]];
 			lpos += 1;
 	];
 	pPrint[5, "Setting up GUROBI: set SOC constraints"];
@@ -593,7 +588,7 @@ Module[{a, b, c, d, q, objvec, objmat, data, nvars, status, lpos, nextra, norig,
 			{d, c, q} = coefficients[[lpos]];
 			dPrint[5, "quad {q, c, d}-> ", {q, c, d}];
 			error = GUROBIAddQuadraticConstraint[data, SparseArray[q], SparseArray[c], "<", -d];
-			If[error=!=0, Return[$Failed]];
+			If[error=!=0, dPrint[3, "add quad const error: ", error]; Return[$Failed]];
 			lpos += 1;
 	];
 	pPrint[5, "Setting up GUROBI: set quadratic constraints"];

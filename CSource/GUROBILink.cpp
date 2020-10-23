@@ -458,20 +458,27 @@ EXTERN_C DLLEXPORT int GUROBIData_AddLinearConstraints(WolframLibraryData libDat
 		Ap[j] = (int)idata[j];
 	Anz = (int)idata[ncons];
 	if (Anz == 0)
-		return LIBRARY_FUNCTION_ERROR;
+	{
+		free(Ap);
+		Ap = nullptr;
+		Ai = nullptr;
+		Ax = nullptr;
+	}
+	else
+	{
+		Ai = (int*)malloc(sizeof(int) * Anz);
+		Tp = (*libData->sparseLibraryFunctions->MSparseArray_getColumnIndices)(AMat);
+		if (libData->MTensor_getFlattenedLength(*Tp) != Anz)
+			return LIBRARY_FUNCTION_ERROR;
+		idata = libData->MTensor_getIntegerData(*Tp);
+		for (j = 0; j < Anz; j++)
+			Ai[j] = (int)(idata[j] - 1);
 
-	Ai = (int*)malloc(sizeof(int) * Anz);
-	Tp = (*libData->sparseLibraryFunctions->MSparseArray_getColumnIndices)(AMat);
-	if (libData->MTensor_getFlattenedLength(*Tp) != Anz)
-		return LIBRARY_FUNCTION_ERROR;
-	idata = libData->MTensor_getIntegerData(*Tp);
-	for (j = 0; j < Anz; j++)
-		Ai[j] = (int)(idata[j] - 1);
-
-	Tp = (*libData->sparseLibraryFunctions->MSparseArray_getExplicitValues)(AMat);
-	if (libData->MTensor_getFlattenedLength(*Tp) != Anz)
-		return LIBRARY_FUNCTION_ERROR;
-	Ax = libData->MTensor_getRealData(*Tp);
+		Tp = (*libData->sparseLibraryFunctions->MSparseArray_getExplicitValues)(AMat);
+		if (libData->MTensor_getFlattenedLength(*Tp) != Anz)
+			return LIBRARY_FUNCTION_ERROR;
+		Ax = libData->MTensor_getRealData(*Tp);
+	}
 
 	senseString = MArgument_getUTF8String(Args[2]);
 	sense = senseString[0];
