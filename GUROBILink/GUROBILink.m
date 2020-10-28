@@ -6,7 +6,7 @@ $GUROBILinkLibrary::usage  = "$GUROBILinkLibrary is the full path to the GUROBIL
 $GUROBILinkDirectory::usage = "$GUROBILinkDirectory gives the location of the GUROBILink library."
 LoadGUROBILink::usage  = "LoadGUROBILink[] loads the GUROBILink library."
 GUROBILink::usage = "GUROBILink is used as a symbol for message heads from GUROBI error codes."
-GUROBICheckLicense::usage = "GUROBICheckLicense[data]"
+GUROBITestLicense::usage = "GUROBITestLicense[] checks for a valid GUROBI license."
 GUROBISetVariableTypesAndObjectiveVector::usage = "GUROBISetVariableTypesAndObjectiveVector[data, vartypes, objvector], vartypes is a string with \"C\" at positions of continuous variables and \"I\" for integer variables."
 GUROBISetVariableTypesAndBoundsAndObjectiveVector::usage = "GUROBISetVariableTypesAndBoundsAndObjectiveVector[data, vartypes, lowerbounds, upperbounds, objvector], vartypes is a string with \"C\" at positions of continuous variables and \"I\" for integer variables."
 GUROBIAddQuadraticObjectiveMatrix::usage = "GUROBIAddQuadraticObjectiveMatrix[data, saQmat]"
@@ -151,38 +151,40 @@ Module[{error},
 GUROBILink::license = "Cannot find a valid GUROBI license for version 9.0 or greater." 
 
 (* Check for license, just once *)
-hasGUROBILicense = TrueQ[GUROBICheckLicense[env]];
+GUROBITestLicense[] :=
+	(GUROBITestLicense[] = TrueQ[GUROBICheckLicense[env]])
 
-(* Register convex methods, only if license was found *)
-If[hasGUROBILicense,
-	(* Method "GUROBI1" is only for condstraints suppoted by GUROBI -- linear, quadratic and soc membership.
-		For general affine SOC constraints 'Ax+b in K', unless A is diagonal, use method "GUROBI",
-		or try Method -> {"GUROBI1", "NonConvex" -> 2} *)
-	Optimization`MethodFramework`RegisterOptimizationMethod["GUROBI1",
-		Association[
-			"SolveFunction" -> GUROBISolve1,
-			"ObjectiveSupport" -> "Quadratic",
-			"ConstraintSupport" -> Association[{"EqualityConstraint" -> "Affine", "NonNegativeCone" -> "Affine",
-			"NormCone" -> "Affine", "QuadraticConstraint" -> "Affine"}],
-			"MixedIntegerSupport"->True
-		]
-	];
-	(* "GUROBI" method solves problems with linear or quadratic objective and
-		linear, quadratic and second order cone affine constraints.
-		In order to handle affine SOC constraints it adds new variables y = A.x+b *)
-	Optimization`MethodFramework`RegisterOptimizationMethod["GUROBI",
-		Association[
-			"SolveFunction" -> GUROBISolve2,
-			"ObjectiveSupport" -> "Quadratic",
-			"ConstraintSupport" -> Association[{"EqualityConstraint"->"Affine", "NonNegativeCone"->"Affine",
-			"NormCone"->"Membership", "QuadraticConstraint" -> "Affine"}],
-			"MixedIntegerSupport"->True
-		]
-	];
+licenseData = <|"TestFunction"->GUROBITestLicense, "WorkflowName"->"GUROBI"|>;
 
-	, (* else *)
-	Clear[env];
+(* Register optimization methods *)
+
+(* Method "GUROBI1" is only for condstraints suppoted by GUROBI -- linear, quadratic and soc membership.
+   For general affine SOC constraints 'Ax+b in K', unless A is diagonal, use method "GUROBI",
+   or try Method -> {"GUROBI1", "NonConvex" -> 2} *)
+Optimization`MethodFramework`RegisterOptimizationMethod["GUROBI1",
+	Association[
+		"SolveFunction" -> GUROBISolve1,
+		"ObjectiveSupport" -> "Quadratic",
+		"ConstraintSupport" -> Association[{"EqualityConstraint" -> "Affine", "NonNegativeCone" -> "Affine",
+		"NormCone" -> "Affine", "QuadraticConstraint" -> "Affine"}],
+		"MixedIntegerSupport"->True,
+		"License"->licenseData
+	]
 ];
+(* "GUROBI" method solves problems with linear or quadratic objective and
+    linear, quadratic and second order cone affine constraints.
+    In order to handle affine SOC constraints it adds new variables y = A.x+b *)
+Optimization`MethodFramework`RegisterOptimizationMethod["GUROBI",
+	Association[
+	"SolveFunction" -> GUROBISolve2,
+		"ObjectiveSupport" -> "Quadratic",
+		"ConstraintSupport" -> Association[{"EqualityConstraint"->"Affine", "NonNegativeCone"->"Affine",
+		"NormCone"->"Membership", "QuadraticConstraint" -> "Affine"}],
+		"MixedIntegerSupport"->True,
+		"License"->licenseData
+	]
+];
+
 
 (* GUROBIData expression (GUROBISolMap) related: *)
 
@@ -322,8 +324,7 @@ Module[{n, Q, q, b1, psd},
 ]
 
 GUROBILink::badmethod = "Method \"GUROBI1\" is not suitable for general affine SOC constraints. \
-It is better to use method \"GUROBI\" instead. \
-If looking for adventure, try Method -> {\"GUROBI1\", \"NonConvex\" -> 2}."
+Use method \"GUROBI\"."
 
 GUROBISetNumberOfConstraints[GUROBIData[id_]?(testGUROBIData[GUROBISetNumberOfConstraints]), ncons_]:=
 Module[{error},
