@@ -429,10 +429,19 @@ GUROBIObjectiveValue[GUROBIData[id_]?(testGUROBIData[GUROBIObjectiveValue])] := 
 
 GUROBISlack[GUROBIData[id_]?(testGUROBIData[GUROBISlack])] := GUROBISlack0[id];
 
+(* Determine the NonConvex setting for the GUROBI optimizer:
+ttps://www.gurobi.com/documentation/9.0/refman/nonconvex.html*)
+
+getNonConvexSetting[problemData_] :=
+Module[{convexity = problemData["Convexity"]},
+	dPrint[5, "convexity: ", convexity];
+	If[MatchQ[convexity, "Convex"], 1, 2]
+]
+
 (* Method functions *)
 
 GUROBISolve1[problemData_, pmopts___] :=
-Module[{a, b, c, d, q, data, objvec, objmat, ncons, coefficients, coneSpecifications, lpos, intvars, error, status},
+Module[{a, b, c, d, q, data, objvec, objmat, ncons, coefficients, coneSpecifications, lpos, intvars, nonconvex, error, status},
 
 	pReset[5];
 	dPrint[1, "In GUROBISolve1"];
@@ -458,6 +467,9 @@ Module[{a, b, c, d, q, data, objvec, objmat, ncons, coefficients, coneSpecificat
 	coneSpecifications = problemData["ConstraintSpecifications"];
 	ncons = Length[coneSpecifications];
 	dPrint[3, "coneSpecifications: ", coneSpecifications];
+
+	nonconvex = getNonConvexSetting[problemData];
+	dPrint[5, "nonconvex: ", nonconvex];
 
 	(* "EqualityConstraint" will always come first, then "NonNegativeCone",
 		any number of "NormCone"s, any number of quadratic constraints *)
@@ -491,6 +503,9 @@ Module[{a, b, c, d, q, data, objvec, objmat, ncons, coefficients, coneSpecificat
 			lpos += 1;
 	];
 
+	(* GUROBISolve: *)
+	status = GUROBIOptimize[data, {pmopts, "NonConvex"->nonconvex}];
+
 	status = GUROBIOptimize[data, pmopts];
 	status = GUROBIStringStatus[data];
 	If[!StringQ[status], Return[$Failed]];
@@ -511,7 +526,7 @@ GUROBI1Data[data_, _]["DualMaximizer"] := Missing["NotAvailable"];
 
 GUROBISolve2[problemData_, pmopts___] :=
 Module[{a, b, c, d, q, objvec, objmat, data, nvars, status, lpos, nextra, norig, integerColumns,
-	coefficients, coeff, coneSpecifications, ncons, coneVariableIndexes, error},
+	coefficients, coeff, coneSpecifications, ncons, coneVariableIndexes, nonconvex, error},
 	(* For method GUROBI *)
 
 	dPrint[1, "In GUROBISolve2"];
@@ -524,22 +539,22 @@ Module[{a, b, c, d, q, objvec, objmat, data, nvars, status, lpos, nextra, norig,
 
 	pPrint[5, "Setting up GUROBI: create and check data"];
 	objvec = problemData["ObjectiveVector"];
+	dPrint[5, "objvec: ", objvec];
 	nvars = Length[objvec];
 	objmat = problemData["ObjectiveMatrix"];
 	nextra = Lookup[problemData, "ExtraColumns", 0];
 	norig = nvars - nextra;
-	coefficients = problemData["ConstraintCoefficientArrays"];
 	coneSpecifications = problemData["ConstraintSpecifications"];
-	ncons = Length[coneSpecifications];
- 	coneVariableIndexes = problemData["ConeVariableColumns"];
-
-	dPrint[5, "objvec: ", objvec];
-	dPrint[5, "coefficients: ", coefficients];
 	dPrint[3, "coneSpecifications: ", coneSpecifications];
+	coefficients = problemData["ConstraintCoefficientArrays"];
+	dPrint[5, "coefficients: ", coefficients];
+	ncons = Length[coneSpecifications];
 	dPrint[3, "ncons: ", ncons];
+	coneVariableIndexes = problemData["ConeVariableColumns"];
 	If[MatchQ[coneVariableIndexes, _Missing], coneVariableIndexes = ConstantArray[None, ncons]];
 	dPrint[5, "coneVariableIndexes: ", coneVariableIndexes];
-
+	nonconvex = getNonConvexSetting[problemData];
+	dPrint[5, "nonconvex: ", nonconvex];
 	integerColumns = problemData["IntegerVariableColumns"];
 	dPrint[5, "integerColumns: ", integerColumns];
 	pPrint[5, "Setting up GUROBI: get problem data"];
@@ -595,7 +610,7 @@ Module[{a, b, c, d, q, objvec, objmat, data, nvars, status, lpos, nextra, norig,
 	pPrint[5, "Setting up GUROBI: set quadratic constraints"];
 
 	(* GUROBISolve: *)
-	status = GUROBIOptimize[data, pmopts];
+	status = GUROBIOptimize[data, {pmopts, "NonConvex"->nonconvex}];
 	status = GUROBIStringStatus[data];
 	If[!StringQ[status], Return[$Failed]];
 	status = Optimization`SolutionData`WrapStatus[status];
