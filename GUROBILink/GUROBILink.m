@@ -2,19 +2,19 @@
 
 BeginPackage["GUROBILink`"]
 
-$GUROBILinkLibrary::usage  = "$GUROBILinkLibrary is the full path to the GUROBILink library loaded."
+$GUROBILinkLibrary::usage  = "$GUROBILinkLibrary is the full path to the loaded GUROBILink library."
 $GUROBILinkDirectory::usage = "$GUROBILinkDirectory gives the location of the GUROBILink library."
 LoadGUROBILink::usage  = "LoadGUROBILink[] loads the GUROBILink library."
-GUROBILink::usage = "GUROBILink is used as a symbol for message heads from GUROBI error codes."
-GUROBITestLicense::usage = "GUROBITestLicense[] checks for a valid GUROBI license."
-GUROBISetVariableTypesAndObjectiveVector::usage = "GUROBISetVariableTypesAndObjectiveVector[data, vartypes, objvector], vartypes is a string with \"C\" at positions of continuous variables and \"I\" for integer variables."
-GUROBISetVariableTypesAndBoundsAndObjectiveVector::usage = "GUROBISetVariableTypesAndBoundsAndObjectiveVector[data, vartypes, lowerbounds, upperbounds, objvector], vartypes is a string with \"C\" at positions of continuous variables and \"I\" for integer variables."
-GUROBIAddQuadraticObjectiveMatrix::usage = "GUROBIAddQuadraticObjectiveMatrix[data, saQmat]"
-GUROBIAddLinearConstraintIndices::usage = "GUROBIAddLinearConstraintIndices[data, indices, values, sense, rhs], where sense is \">\", \"<\" or \"=\"."
-GUROBIAddLinearConstraint::usage = "GUROBIAddLinearConstraint[data, a, sense, b] -> a.x sense b, where sense is \">\", \"<\" or \"=\"."
-GUROBIAddLinearConstraints::usage = "GUROBIAddLinearConstraints[data, mat, sense, rhs], where sense is \">\", \"<\" or \"=\"."
-GUROBIAddQuadraticConstraintIndices::usage = "GUROBIAddQuadraticConstraintIndices[data, linind, linvals, quadrow, quadcol, quadvals, sense, rhs], where sense is \">\", \"<\" or \"=\"."
-GUROBIAddQuadraticConstraint::usage = "GUROBIAddQuadraticConstraint[data, Qmat, qvec, sense, rhs] --> 1/2 x^T.Q.x + q.x sense b, where sense is \">\", \"<\" or \"=\"."
+GUROBILink::usage = "GUROBILink is a symbol used for message heads, e.g. in messages triggered by GUROBI error codes."
+GUROBITestLicense::usage = "GUROBITestLicense[] returns True if a valid GUROBI license was found."
+GUROBISetVariableTypesAndObjectiveVector::usage = "GUROBISetVariableTypesAndObjectiveVector[data, vartypes, objvector] sets objective vector and variable types as a string with \"C\" at positions of continuous variables and \"I\" for integer variables."
+GUROBISetVariableTypesAndBoundsAndObjectiveVector::usage = "GUROBISetVariableTypesAndBoundsAndObjectiveVector[data, vartypes, lowerbounds, upperbounds, objvector] sets objective vector, vectors of lower and upper bounds for the variables and variable types as a string with \"C\" at positions of continuous variables and \"I\" for integer variables."
+GUROBIAddQuadraticObjectiveMatrix::usage = "GUROBIAddQuadraticObjectiveMatrix[data, Q] adds a quadratic objective matrix Q that must be sparse, symmetric and positive semi-definite."
+GUROBIAddLinearConstraint::usage = "GUROBIAddLinearConstraint[data, avec, sense, bnum] adds a constraint avec.x sense bnum, where sense is \">\", \"<\" or \"=\"."
+GUROBIAddLinearConstraints::usage = "GUROBIAddLinearConstraints[data, amat, sense, bvec] adds a constraint amat.x sense bvec, where sense is \">\", \"<\" or \"=\"."
+GUROBIAddLinearConstraintIndices::usage = "GUROBIAddLinearConstraintIndices[data, nzindices, nzvalues, sense, bnum] add a constraint avec.x sense bnum, where sense is \">\", \"<\" or \"=\" and avec is described by its nonzero values and their positions as {nzindices, nzvalues}."
+GUROBIAddQuadraticConstraint::usage = "GUROBIAddQuadraticConstraint[data, Qmat, qvec, sense, rhs] adds a constraint 1/2 x^T.Q.x + q.x sense b, where sense is \">\", \"<\" or \"=\"."
+GUROBIAddQuadraticConstraintIndices::usage = "GUROBIAddQuadraticConstraintIndices[data, linind, linvals, quadrow, quadcol, quadvals, sense, rhs] adds a constraint 1/2 x^T.Q.x + q.x sense b, where sense is \">\", \"<\" or \"=\", Q is represented by its nonzero values and their positions {quadrow, quadcol, quadvals} and q is represented by its non-zero values and their positioons {linind, linvals}."
 GUROBIAddSOCMembershipConstraint::usage = "GUROBIAddSOCMembershipConstraint[data, ind]"
 GUROBIAddSOCAffineConstraint::usage = "GUROBIAddSOCAffineConstraint[data, A, b] adds the constaraint VectorGreaterEqual[{Ax + b, 0}, {\"NormCone\", n}]"
 
@@ -158,7 +158,7 @@ licenseData = <|"TestFunction"->GUROBITestLicense, "WorkflowName"->"GUROBI"|>;
 
 (* Register optimization methods *)
 
-(* Method "GUROBI1" is only for condstraints suppoted by GUROBI -- linear, quadratic and soc membership.
+(* Method "GUROBI1" is only for condstraints suppoted by GUROBI -- linear, quadratic and second order cone(SOC) membership.
    For general affine SOC constraints 'Ax+b in K', unless A is diagonal, use method "GUROBI",
    or try Method -> {"GUROBI1", "NonConvex" -> 2} *)
 Optimization`MethodFramework`RegisterOptimizationMethod["GUROBI1",
@@ -171,8 +171,8 @@ Optimization`MethodFramework`RegisterOptimizationMethod["GUROBI1",
 		"License"->licenseData
 	]
 ];
-(* "GUROBI" method solves problems with linear or quadratic objective and
-    linear, quadratic and second order cone affine constraints.
+(* Method "GUROBI" solves problems with linear or quadratic objective and
+    linear, quadratic and second order cone(SOC) affine constraints.
     In order to handle affine SOC constraints it adds new variables y = A.x+b *)
 Optimization`MethodFramework`RegisterOptimizationMethod["GUROBI",
 	Association[
@@ -326,17 +326,12 @@ Module[{n, Q, q, b1, psd},
 GUROBILink::badmethod = "Method \"GUROBI1\" is not suitable for general affine SOC constraints. \
 Use method \"GUROBI\"."
 
-GUROBISetNumberOfConstraints[GUROBIData[id_]?(testGUROBIData[GUROBISetNumberOfConstraints]), ncons_]:=
-Module[{error},
-	error = GUROBISetNumberOfConstraints0[id, ncons];
-]
-
-GUROBISetParameters[GUROBIData[id_]?(testGUROBIData[GUROBISetNumberOfConstraints]), maxit_, tol_, nonconvex_]:=
+GUROBISetParameters[GUROBIData[id_]?(testGUROBIData[GUROBISetParameters]), maxit_, tol_, nonconvex_]:=
 Module[{error},
 	error = GUROBISetParameters0[id, maxit, tol, nonconvex]
 ]
 
-GUROBISetStartingPoint[GUROBIData[id_]?(testGUROBIData[GUROBISetNumberOfConstraints]), startpt_]:=
+GUROBISetStartingPoint[GUROBIData[id_]?(testGUROBIData[GUROBISetStartingPoint]), startpt_]:=
 Module[{error},
 	error = GUROBISetStartingPoint0[id, N[startpt]];
 ]
@@ -440,13 +435,14 @@ Module[{convexity = problemData["Convexity"]},
 
 (* Method functions *)
 
+(* Solve function for method GUROBI1 *)
 GUROBISolve1[problemData_, pmopts___] :=
 Module[{a, b, c, d, q, data, objvec, objmat, ncons, coefficients, coneSpecifications, lpos, intvars, nonconvex, error, status},
-
 	pReset[5];
 	dPrint[1, "In GUROBISolve1"];
 	dPrint[3, "pmopts: ", pmopts];
 
+	(* Retrieve and set up the problem data *)
 	data = GUROBIDataCreate[];
 	If[!GUROBIDataQ[data], Return[$Failed]];
 	If[!GUROBICheckModel[data], Return[$Failed]];
@@ -503,15 +499,14 @@ Module[{a, b, c, d, q, data, objvec, objmat, ncons, coefficients, coneSpecificat
 			lpos += 1;
 	];
 
-	(* GUROBISolve: *)
+	(* Solve *)
 	status = GUROBIOptimize[data, {pmopts, "NonConvex"->nonconvex}];
 
-	status = GUROBIOptimize[data, pmopts];
 	status = GUROBIStringStatus[data];
 	If[!StringQ[status], Return[$Failed]];
 	status = Optimization`SolutionData`WrapStatus[status];
 	(*Print["obj val: ", GUROBIObjectiveValue[data]];
-	Print["x: ",GUROBIx[data]];*)
+	Print["x: ", GUROBIx[data]];*)
 
 	dPrint[1, "status: ", status];
 	{status, GUROBI1Data[data, {}]}
@@ -524,15 +519,16 @@ GUROBI1Data[data_, _]["DualMaximumValue"] := Missing["NotAvailable"];
 GUROBI1Data[data_, _]["DualityGap"] := Missing["NotAvailable"];
 GUROBI1Data[data_, _]["DualMaximizer"] := Missing["NotAvailable"];
 
+(* Solve function for method GUROBI *)
 GUROBISolve2[problemData_, pmopts___] :=
 Module[{a, b, c, d, q, objvec, objmat, data, nvars, status, lpos, nextra, norig, integerColumns,
 	coefficients, coeff, coneSpecifications, ncons, coneVariableIndexes, nonconvex, error},
-	(* For method GUROBI *)
 
 	dPrint[1, "In GUROBISolve2"];
 	dPrint[3, "pmopts: ", pmopts];
 	pReset[5];
 
+	(* Retrieve and set up the problem data: *)
 	data = GUROBIDataCreate[];
 	If[!GUROBIDataQ[data], Return[$Failed]];
 	If[!GUROBICheckModel[data], Return[$Failed]];
@@ -609,13 +605,13 @@ Module[{a, b, c, d, q, objvec, objmat, data, nvars, status, lpos, nextra, norig,
 	];
 	pPrint[5, "Setting up GUROBI: set quadratic constraints"];
 
-	(* GUROBISolve: *)
+	(* Solve: *)
 	status = GUROBIOptimize[data, {pmopts, "NonConvex"->nonconvex}];
 	status = GUROBIStringStatus[data];
 	If[!StringQ[status], Return[$Failed]];
 	status = Optimization`SolutionData`WrapStatus[status];
 	(*Print["obj val: ", GUROBIObjectiveValue[data]];
-	Print["x: ",GUROBIx[data]];*)
+	Print["x: ", GUROBIx[data]];*)
 
 	{status, GUROBI2Data[data, {integerColumns}]}
 ];
