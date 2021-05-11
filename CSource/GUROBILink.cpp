@@ -1,10 +1,5 @@
-#include <cstdlib>
-#include <cstring>
 #include <algorithm>
-#include "WolframLibrary.h"
-#include "WolframSparseLibrary.h"
 #include "GUROBISolution.h"
-#include "gurobi_c.h"
 
 EXTERN_C DLLEXPORT mint WolframLibrary_getVersion()
 {
@@ -42,7 +37,8 @@ EXTERN_C DLLEXPORT int GUROBIData_CheckLicense(WolframLibraryData libData, mint 
 	mint envID;
 	GUROBIEnvironment GUROBIenvironment;
 
-	if (Argc != 1) {
+	if (Argc != 1)
+	{
 		return LIBRARY_FUNCTION_ERROR;
 	}
 
@@ -86,8 +82,7 @@ EXTERN_C DLLEXPORT int GUROBIData_CheckModel(WolframLibraryData libData, mint Ar
 /*     GUROBISetVariableTypesAndObjectiveVector[data, intvars, objvector]     */
 /******************************************************************************/
 
-EXTERN_C DLLEXPORT int GUROBIData_SetVariableTypesAndObjectiveVector(WolframLibraryData libData, mint Argc,
-																	 MArgument* Args, MArgument Res)
+EXTERN_C DLLEXPORT int GUROBIData_SetVariableTypesAndObjectiveVector(WolframLibraryData libData, mint Argc, MArgument* Args, MArgument Res)
 {
 	int error;
 	mint i, nvars, nintvars, dataID, *intvars = nullptr;
@@ -113,17 +108,11 @@ EXTERN_C DLLEXPORT int GUROBIData_SetVariableTypesAndObjectiveVector(WolframLibr
 	GUROBIdata->nvars = nvars;
 
 	lbounds = (double*)malloc(nvars * sizeof(double));
-	// set lb to be a vector of -GRB_INFINITY, if we leave it NULL the default is 0.0
+	// set lb to be a vector of -GRB_INFINITY; if we leave it nullptr the default is a vector of 0.0
 	std::fill_n(lbounds, nvars, -GRB_INFINITY);
-	/*for (i = 0; i < nvars; i++) {
-		lbounds[i] = -GRB_INFINITY;
-	}*/
 
 	vartypes = (char*)malloc(nvars * sizeof(char));
 	memset(vartypes, 'C', nvars);
-	/*for (i = 0; i < nvars; i++) {
-		vartypes[i] = 'C';
-	}*/
 	for (i = 0; i < nintvars; i++)
 	{
 		vartypes[intvars[i] - 1] = 'I';
@@ -137,6 +126,7 @@ EXTERN_C DLLEXPORT int GUROBIData_SetVariableTypesAndObjectiveVector(WolframLibr
 		free(lbounds);
 	if (vartypes)
 		free(vartypes);
+
 	// load return values
 	MArgument_setInteger(Res, (mint)error);
 
@@ -182,8 +172,6 @@ EXTERN_C DLLEXPORT int GUROBIData_SetVariableTypesAndBoundsAndObjectiveVector(Wo
 	// Add objective vector and variable types
 	error = GRBaddvars(GUROBIdata->model, nvars, 0, nullptr, nullptr, nullptr, objvec, lbounds, ubounds, vartypes, nullptr);
 
-	// free stuff
-
 	// load return values
 	MArgument_setInteger(Res, (mint)error);
 
@@ -216,7 +204,7 @@ EXTERN_C DLLEXPORT int GUROBIData_AddQuadraticObjectiveMatrix(WolframLibraryData
 	pT = (*(libData->sparseLibraryFunctions->MSparseArray_getExplicitValues))(Qmat);
 	quadval = libData->MTensor_getRealData(*pT);
 	if (*pT != nullptr)
-		numquadnz = libData->MTensor_getFlattenedLength(*pT);
+		numquadnz = (int)(libData->MTensor_getFlattenedLength(*pT));
 	else
 		numquadnz = 0;
 
@@ -276,6 +264,7 @@ EXTERN_C DLLEXPORT int GUROBIData_AddLinearConstraint(WolframLibraryData libData
 
 	dataID = MArgument_getInteger(Args[0]);
 	GUROBIdata = GUROBIDataMap_get(dataID);
+
 	pT = MArgument_getMTensor(Args[1]);
 	nz = (int)(libData->MTensor_getFlattenedLength(pT));
 	idata = libData->MTensor_getIntegerData(pT);
@@ -291,14 +280,6 @@ EXTERN_C DLLEXPORT int GUROBIData_AddLinearConstraint(WolframLibraryData libData
 	sense = senseString[0];
 
 	rhs = MArgument_getReal(Args[4]);
-
-	// Add constraint coefficients indices and values, equal/ineq sign and right hand side
-	// example: x + 2 y + 3 z <= 4
-	// nz = 3;
-	// indices[0] = 0; indices[1] = 1; indices[2] = 2;
-	// indices[0] = 1; indices[1] = 2; indices[2] = 3;
-	// sense = GRB_LESS_EQUAL
-	// rhs = 4
 
 	error = GRBaddconstr(GUROBIdata->model, nz, indices, values, sense, rhs, nullptr);
 
@@ -396,14 +377,6 @@ EXTERN_C DLLEXPORT int GUROBIData_AddLinearConstraint1(WolframLibraryData libDat
 	sense = senseString[0];
 
 	rhs = MArgument_getReal(Args[3]);
-
-	// Add constraint coefficients indices and values, equal/ineq sign and right hand side
-	// example: x + 2 y + 3 z <= 4
-	// nz = 3;
-	// indices[0] = 0; indices[1] = 1; indices[2] = 2;
-	// indices[0] = 1; indices[1] = 2; indices[2] = 3;
-	// sense = GRB_LESS_EQUAL
-	// rhs = 4
 
 	error = GRBaddconstr(GUROBIdata->model, nz, indices, values, sense, rhs, nullptr);
 
@@ -572,25 +545,15 @@ EXTERN_C DLLEXPORT int GUROBIData_AddQuadraticConstraint(WolframLibraryData libD
 
 	rhs = MArgument_getReal(Args[7]);
 
-	// Add constraint coefficients indices and values, equal/ineq sign and right hand side
-	// example: 2 x0^2 + x0 x1 + x1^2 + 2 x1 + x2 <= 1
-	// int    numlinnz = 2;
-	// int    linind[] = {1, 2};
-	// double linval[] = {2.0, 1.0};
-	// int    numquadnz = 3;
-	// int    quadrow[] = {0, 0, 1};
-	// int    quadcol[] = {0, 1, 1};
-	// double quadval[] = {2.0, 1.0, 1.0};
-
 	error = GRBaddqconstr(GUROBIdata->model, numlinnz, linind, linval, numquadnz, quadrow, quadcol, quadval, sense, rhs, "qc");
 
 	// free stuff
 	if (linind)
-		free (linind);
+		free(linind);
 	if (quadrow)
-		free (quadrow);
+		free(quadrow);
 	if (quadcol)
-		free (quadcol);
+		free(quadcol);
 
 	// load return values
 	MArgument_setInteger(Res, (mint)error);
@@ -657,19 +620,7 @@ EXTERN_C DLLEXPORT int GUROBIData_AddQuadraticConstraint1(WolframLibraryData lib
 
 	rhs = MArgument_getReal(Args[4]);
 
-	// Add constraint coefficients indices and values, equal/ineq sign and right hand side
-	// example: 2 x0^2 + x0 x1 + x1^2 + 2 x1 + x2 <= 1
-	// int    numlinnz = 2;
-	// int    linind[] = {1, 2};
-	// double linval[] = {2.0, 1.0};
-	// int    numquadnz = 3;
-	// int    quadrow[] = {0, 0, 1};
-	// int    quadcol[] = {0, 1, 1};
-	// double quadval[] = {2.0, 1.0, 1.0};
-
 	error = GRBaddqconstr(GUROBIdata->model, numlinnz, linind, linval, numquadnz, quadrow, quadcol, quadval, sense, rhs, "qc1");
-
-	// error = GRBaddqconstr(GUROBIdata->model, 0, NULL, NULL, 0, NULL, NULL, NULL, sense, rhs, NULL);
 
 	// free stuff
 	if (Tq)
@@ -762,8 +713,6 @@ EXTERN_C DLLEXPORT int GUROBIData_SetStartingPoint(WolframLibraryData libData, m
 	start = libData->MTensor_getRealData(pT);
 
 	error = GRBsetdblattrarray(GUROBIdata->model, "Start", 0, (int)(GUROBIdata->nvars), start);
-
-	// free stuff
 
 	// load return values
 	MArgument_setInteger(Res, error);
@@ -950,8 +899,6 @@ EXTERN_C DLLEXPORT int GUROBIData_GetSlack(WolframLibraryData libData, mint Argc
 	if (error)
 		return LIBRARY_FUNCTION_ERROR;
 	allcons = ncons + nqcons;
-
-	// It is not clear what length to expect for the slack and in any case it doesn't seem to work for quadratic constraints
 
 	/* get the minimizer vector */
 	slack = (double*)malloc(sizeof(double) * (allcons));

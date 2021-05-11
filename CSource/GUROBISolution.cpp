@@ -1,8 +1,5 @@
-#include <cstdlib>
-#include "WolframLibrary.h"
 #include "GUROBISolution.h"
 #include <unordered_map>
-#include "gurobi_c.h"
 
 int GUROBIData_initialize(GUROBIData GUROBIdata)
 {
