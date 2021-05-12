@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstring>
 #include "GUROBISolution.h"
 
 EXTERN_C DLLEXPORT mint WolframLibrary_getVersion()
@@ -112,7 +113,7 @@ EXTERN_C DLLEXPORT int GUROBIData_SetVariableTypesAndObjectiveVector(WolframLibr
 	std::fill_n(lbounds, nvars, -GRB_INFINITY);
 
 	vartypes = (char*)malloc(nvars * sizeof(char));
-	memset(vartypes, 'C', nvars);
+	std::memset(vartypes, 'C', nvars);
 	for (i = 0; i < nintvars; i++)
 	{
 		vartypes[intvars[i] - 1] = 'I';
