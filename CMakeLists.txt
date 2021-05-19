@@ -4,7 +4,7 @@ project(GUROBILink)
 string(TIMESTAMP BUILD_TIME "%d %b %Y at %H:%M")
 
 set(GUROBI_VERSION "9.0.2" CACHE STRING "GUROBI version")
-set(GUROBI_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../Libraries/Gurobi/${GUROBI_VERSION}" CACHE PATH "GUROBI installation")
+set(GUROBI_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/Gurobi/${GUROBI_VERSION}" CACHE PATH "GUROBI installation")
 
 set(INSTALL_PDB OFF CACHE BOOL "Include PDB file in paclet layout")
 
@@ -67,8 +67,8 @@ if(NOT WOLFRAM_INCLUDE_PATH)
 endif()
 
 set(GUROBILINK_SOURCES
-	GUROBILink.cpp
-	GUROBISolution.cpp
+	CSource/GUROBILink.cpp
+	CSource/GUROBISolution.cpp
 )
 
 function(copy_wl_sources SRC DEST)
@@ -89,7 +89,7 @@ endfunction()
 
 if(BUILD_STUB)
 	set(STUB_DESTINATION ${CMAKE_INSTALL_PREFIX}/stub CACHE PATH "Stub build destination")
-	copy_wl_sources(${CMAKE_CURRENT_SOURCE_DIR}/../PacletStub ${STUB_DESTINATION}/${PROJECT_NAME} )
+	copy_wl_sources(${CMAKE_CURRENT_SOURCE_DIR}/PacletStub ${STUB_DESTINATION}/${PROJECT_NAME} )
 	set(FULL full)
 endif()
 
@@ -101,7 +101,7 @@ set(PACLET_LIBDIR ${PACLET_DESTINATION}/${PROJECT_NAME}/LibraryResources/${SYSTE
 add_library(${PROJECT_NAME} SHARED ${GUROBILINK_SOURCES})
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 target_include_directories(${PROJECT_NAME} PRIVATE
-	${CMAKE_SOURCE_DIR}
+	${CMAKE_SOURCE_DIR}/CSource
 	${GUROBI_INCLUDE_PATH}
 	${WOLFRAM_INCLUDE_PATH}
 	)
@@ -130,4 +130,4 @@ if(INSTALL_PDB)
 	install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${PACLET_LIBDIR} OPTIONAL)
 endif()
 
-copy_wl_sources(${CMAKE_CURRENT_SOURCE_DIR}/../${PROJECT_NAME} ${PACLET_DESTINATION}/${PROJECT_NAME})
+copy_wl_sources(${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME} ${PACLET_DESTINATION}/${PROJECT_NAME})
