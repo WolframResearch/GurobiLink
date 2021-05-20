@@ -13,7 +13,6 @@ set(GUROBI_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/Gurobi/${GUROBI_VERSION}"
 
 set(INSTALL_PDB OFF CACHE BOOL "Include PDB file in paclet layout")
 
-set(BUILD_STUB OFF CACHE BOOL "Build stub paclet")
 set(PACLET_VERSION 1.0.1 CACHE STRING "Paclet version")
 set(TARGET_WOLFRAM_VERSION 12.3+ CACHE STRING "Target Mathematica version")
 
@@ -63,31 +62,13 @@ set(GUROBILINK_SOURCES
 	CSource/GUROBISolution.cpp
 )
 
-function(copy_wl_sources SRC DEST)
-	string(RANDOM temp)
-	configure_file(
-		${SRC}/PacletInfo.m.in
-		${CMAKE_BINARY_DIR}/generated/${temp}/PacletInfo.m
-	)
-	set(WL_SOURCES
-		${SRC}/${PROJECT_NAME}.m
-		${CMAKE_BINARY_DIR}/generated/${temp}/PacletInfo.m
-		)
-	install(FILES
-		${WL_SOURCES}
-		DESTINATION ${DEST}
-		)
-endfunction()
 
-if(BUILD_STUB)
-	set(STUB_DESTINATION ${CMAKE_INSTALL_PREFIX}/stub CACHE PATH "Stub build destination")
-	copy_wl_sources(${CMAKE_CURRENT_SOURCE_DIR}/PacletStub ${STUB_DESTINATION}/${PROJECT_NAME} )
-	set(FULL full)
-endif()
+
+
+
 
 set(PACLET_DESTINATION ${CMAKE_INSTALL_PREFIX}/${FULL} CACHE PATH "Full build destination")
-set(PACLET_LIBDIR ${PACLET_DESTINATION}/${PROJECT_NAME}/LibraryResources/${SYSTEMID})
-
+set(PACLET_LIBDIR ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}/LibraryResources/${SYSTEMID})
 
 
 add_library(${PROJECT_NAME} SHARED ${GUROBILINK_SOURCES})
@@ -125,4 +106,14 @@ if(INSTALL_PDB)
 	install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${PACLET_LIBDIR} OPTIONAL)
 endif()
 
-copy_wl_sources(${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME} ${PACLET_DESTINATION}/${PROJECT_NAME})
+configure_file(
+	${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/PacletInfo.m.in
+	${CMAKE_BINARY_DIR}/generated/PacletInfo.m
+)
+
+set(WL_SOURCES
+	${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/${PROJECT_NAME}.m
+	${CMAKE_BINARY_DIR}/generated/PacletInfo.m
+)
+
+install(FILES ${WL_SOURCES} DESTINATION ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME})
