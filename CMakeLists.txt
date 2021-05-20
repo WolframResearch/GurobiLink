@@ -40,7 +40,12 @@ elseif(APPLE)
 	set(SYSTEMID MacOSX-x86-64)
 	set(PLATFORM mac64)
 	set(QUALIFIER Mac64)
-	set(GUROBI_LIB_INSTALL_NAME_PATH /Library/gurobi902/mac64/lib)
+	execute_process(
+		COMMAND otool -D "${GUROBI_ROOT}/${PLATFORM}/lib/${GUROBI_LIB}"
+		OUTPUT_VARIABLE OTOOL_OUT
+	)
+	string(REGEX REPLACE "^.*:.|.$" "" GUROBI_LIB_INSTALL_NAME ${OTOOL_OUT})
+	set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 	set(MATHEMATICA_LAYOUT "/Applications/Mathematica.app/Contents" CACHE PATH "Mathematica installation")
 elseif(UNIX)
 	set(SYSTEMID Linux-x86-64)
@@ -86,7 +91,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE "$<$<CONFIG:DEBUG>:DEBUG>")
 
 if(APPLE)
 	add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-		COMMAND install_name_tool -change ${GUROBI_LIB_INSTALL_NAME_PATH}/${GUROBI_LIB} @loader_path/${GUROBI_LIB} $<TARGET_FILE_NAME:${PROJECT_NAME}>
+		COMMAND install_name_tool -change ${GUROBI_LIB_INSTALL_NAME} @loader_path/${GUROBI_LIB} $<TARGET_FILE_NAME:${PROJECT_NAME}>
 		COMMENT "Setting rpath for ${GUROBI_LIB}"
 	)
 endif()
