@@ -75,14 +75,6 @@ endif()
 set(SYSTEMID ${DEFAULT_SYSTEMID} CACHE STRING "Machine SystemID")
 set(PLATFORM ${DEFAULT_PLATFORM} CACHE STRING "Gurobi platform string")
 
-if(APPLE)
-	execute_process(
-			COMMAND otool -D "${GUROBI_ROOT}/${PLATFORM}/lib/${GUROBI_LIB}"
-			OUTPUT_VARIABLE OTOOL_OUT
-	)
-	string(REGEX REPLACE "^.*:.|.$" "" GUROBI_LIB_INSTALL_NAME ${OTOOL_OUT})
-endif()
-
 if(WIN32)
 	set(GUROBI_DLL_PATH "${GUROBI_ROOT}/${PLATFORM}/bin")
 else()
@@ -118,6 +110,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${GUROBI_LIB})
 target_compile_definitions(${PROJECT_NAME} PRIVATE "$<$<CONFIG:DEBUG>:DEBUG>")
 
 if(APPLE)
+	execute_process(
+			COMMAND otool -D "${GUROBI_ROOT}/${PLATFORM}/lib/${GUROBI_LIB}"
+			OUTPUT_VARIABLE OTOOL_OUT
+	)
+	string(REGEX REPLACE "^.*:.|.$" "" GUROBI_LIB_INSTALL_NAME ${OTOOL_OUT})
 	add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 		COMMAND install_name_tool -change ${GUROBI_LIB_INSTALL_NAME} @loader_path/${GUROBI_LIB} $<TARGET_FILE_NAME:${PROJECT_NAME}>
 		COMMENT "Setting rpath for ${GUROBI_LIB}"
