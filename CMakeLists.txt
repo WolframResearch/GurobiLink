@@ -1,4 +1,9 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.15)
+
+if(POLICY CMP0091)
+	cmake_policy(SET CMP0091 NEW)
+endif()
+
 project(GUROBILink)
 
 string(TIMESTAMP BUILD_TIME "%d %b %Y at %H:%M")
@@ -31,10 +36,6 @@ if(WIN32)
 		set(GUROBI_DLL gurobi90.dll)
 		add_definitions(-DMINT_32)
 	endif()
-	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
-	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd /Zi")
-	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd /Zi")
 	set(MATHEMATICA_LAYOUT "C:/Program Files/Wolfram Research/Mathematica/12.2" CACHE PATH "Mathematica installation")
 elseif(APPLE)
 	set(SYSTEMID MacOSX-x86-64)
@@ -99,7 +100,10 @@ set(PACLET_LIBDIR ${PACLET_DESTINATION}/${PROJECT_NAME}/LibraryResources/${SYSTE
 
 
 add_library(${PROJECT_NAME} SHARED ${GUROBILINK_SOURCES})
-set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
+set_target_properties(${PROJECT_NAME} PROPERTIES
+	MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+	PREFIX ""
+	)
 target_include_directories(${PROJECT_NAME} PRIVATE
 	${CMAKE_SOURCE_DIR}/CSource
 	${GUROBI_INCLUDE_PATH}
