@@ -9,6 +9,11 @@ project(GUROBILink)
 string(TIMESTAMP BUILD_TIME "%d %b %Y at %H:%M")
 
 set(GUROBI_VERSION "9.0.2" CACHE STRING "GUROBI version")
+string(REGEX REPLACE "([0-9]+)\\.[0-9]+\\.[0-9]+.*" "\\1" MAJ_VER ${GUROBI_VERSION})
+set(GUROBI_MAJOR_VERSION ${MAJ_VER} CACHE STRING "Gurobi major version number" FORCE)
+string(REGEX REPLACE "[0-9]+\\.([0-9]+)\\.[0-9]+.*" "\\1" MIN_VER ${GUROBI_VERSION})
+set(GUROBI_MINOR_VERSION ${MIN_VER} CACHE STRING "Gurobi major version number" FORCE)
+
 set(GUROBI_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/Gurobi/${GUROBI_VERSION}" CACHE PATH "GUROBI installation")
 
 set(INSTALL_PDB OFF CACHE BOOL "Include PDB file in paclet layout")
@@ -20,27 +25,27 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/install" CACHE PATH "Install prefix" FORCE)
 endif()
 
+set(GUROBI_DLL
+	${CMAKE_SHARED_LIBRARY_PREFIX}gurobi${GUROBI_MAJOR_VERSION}${GUROBI_MINOR_VERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}
+)
+set(GUROBI_LIB ${GUROBI_DLL})
+
 if(WIN32)
 	set(SYSTEMID Windows-x86-64)
 	set(PLATFORM win64)
 	set(QUALIFIER Win64)
-	set(GUROBI_LIB gurobi90.lib)
-	set(GUROBI_DLL gurobi90.dll)
+	string(REPLACE "${CMAKE_SHARED_LIBRARY_SUFFIX}" "${CMAKE_IMPORT_LIBRARY_SUFFIX}" GUROBI_LIB ${GUROBI_DLL})
 	set(MATHEMATICA_LAYOUT "C:/Program Files/Wolfram Research/Mathematica/12.3" CACHE PATH "Mathematica installation")
 elseif(APPLE)
 	set(SYSTEMID MacOSX-x86-64)
 	set(PLATFORM mac64)
 	set(QUALIFIER Mac64)
-	set(GUROBI_LIB libgurobi90.dylib)
 	set(GUROBI_LIB_INSTALL_NAME_PATH /Library/gurobi902/mac64/lib)
-	set(GUROBI_DLL ${GUROBI_LIB})
 	set(MATHEMATICA_LAYOUT "/Applications/Mathematica.app/Contents" CACHE PATH "Mathematica installation")
 elseif(UNIX)
 	set(SYSTEMID Linux-x86-64)
 	set(PLATFORM linux64)
 	set(QUALIFIER Lin64)
-	set(GUROBI_LIB libgurobi90.so)
-	set(GUROBI_DLL ${GUROBI_LIB})
 	set(CMAKE_INSTALL_RPATH "\$ORIGIN")
 	set(MATHEMATICA_LAYOUT "/usr/local/Wolfram/Mathematica/12.3" CACHE PATH "Mathematica installation")
 endif()
@@ -62,25 +67,19 @@ set(GUROBILINK_SOURCES
 	CSource/GUROBISolution.cpp
 )
 
-
-
-
-
-
 set(PACLET_DESTINATION ${CMAKE_INSTALL_PREFIX}/${FULL} CACHE PATH "Full build destination")
 set(PACLET_LIBDIR ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}/LibraryResources/${SYSTEMID})
-
 
 add_library(${PROJECT_NAME} SHARED ${GUROBILINK_SOURCES})
 set_target_properties(${PROJECT_NAME} PROPERTIES
 	MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
 	PREFIX ""
-	)
+)
 target_include_directories(${PROJECT_NAME} PRIVATE
 	${CMAKE_SOURCE_DIR}/CSource
 	${GUROBI_INCLUDE_PATH}
 	${WOLFRAM_INCLUDE_PATH}
-	)
+)
 target_link_directories(${PROJECT_NAME} PRIVATE ${GUROBI_LIBRARY_PATH})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${GUROBI_LIB})
 target_compile_definitions(${PROJECT_NAME} PRIVATE "$<$<CONFIG:DEBUG>:DEBUG>")
