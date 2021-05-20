@@ -14,7 +14,9 @@ set(GUROBI_MAJOR_VERSION ${MAJ_VER} CACHE STRING "Gurobi major version number" F
 string(REGEX REPLACE "[0-9]+\\.([0-9]+)\\.[0-9]+.*" "\\1" MIN_VER ${GUROBI_VERSION})
 set(GUROBI_MINOR_VERSION ${MIN_VER} CACHE STRING "Gurobi major version number" FORCE)
 
-set(GUROBI_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/Gurobi/${GUROBI_VERSION}" CACHE PATH "GUROBI installation")
+set(COMPONENTS_ROOT "/Components" CACHE PATH "Components location")
+set(GUROBI_ROOT "${COMPONENTS_ROOT}/Gurobi/${GUROBI_VERSION}" CACHE PATH "GUROBI installation")
+mark_as_advanced(COMPONENTS_ROOT GUROBI_ROOT)
 
 set(INSTALL_PDB OFF CACHE BOOL "Include PDB file in paclet layout")
 
