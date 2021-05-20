@@ -1,4 +1,3 @@
-(* Mathematica Package *)
 
 BeginPackage["GUROBILink`"]
 

@@ -21,7 +21,7 @@ mark_as_advanced(COMPONENTS_ROOT)
 set(INSTALL_PDB OFF CACHE BOOL "Include PDB file in paclet layout")
 
 set(PACLET_VERSION 1.0.1 CACHE STRING "Paclet version")
-set(TARGET_WOLFRAM_VERSION 12.3+ CACHE STRING "Target Mathematica version")
+set(TARGET_WOLFRAM_VERSION 12.3+ CACHE STRING "Target Wolfram version")
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/install" CACHE PATH "Install prefix" FORCE)
@@ -41,7 +41,7 @@ if(WIN32)
 	set(DEFAULT_PLATFORM win64)
 	set(QUALIFIER Win64)
 	string(REPLACE "${CMAKE_SHARED_LIBRARY_SUFFIX}" "${CMAKE_IMPORT_LIBRARY_SUFFIX}" GUROBI_LIB ${GUROBI_DLL})
-	set(MATHEMATICA_LAYOUT "C:/Program Files/Wolfram Research/Mathematica/12.3" CACHE PATH "Mathematica installation")
+	set(WOLFRAM_INSTALLATION "C:/Program Files/Wolfram Research/Mathematica/12.3" CACHE PATH "Wolfram installation")
 elseif(APPLE)
 	if(CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64")
 		set(DEFAULT_SYSTEMID MacOSX-x86-64)
@@ -62,7 +62,7 @@ elseif(APPLE)
 	endif()
 	set(QUALIFIER Mac64)
 	set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
-	set(MATHEMATICA_LAYOUT "/Applications/Mathematica.app/Contents" CACHE PATH "Mathematica installation")
+	set(WOLFRAM_INSTALLATION "/Applications/Mathematica.app/Contents" CACHE PATH "Wolfram installation")
 elseif(UNIX)
 	if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
 		message(FATAL_ERROR "Linux-ARM64 is not supported by ${PROJECT_NAME}")
@@ -71,7 +71,7 @@ elseif(UNIX)
 	set(DEFAULT_PLATFORM linux64)
 	set(QUALIFIER Lin64)
 	set(CMAKE_INSTALL_RPATH "\$ORIGIN")
-	set(MATHEMATICA_LAYOUT "/usr/local/Wolfram/Mathematica/12.3" CACHE PATH "Mathematica installation")
+	set(WOLFRAM_INSTALLATION "/usr/local/Wolfram/Mathematica/12.3" CACHE PATH "Wolfram installation")
 endif()
 
 set(SYSTEMID ${DEFAULT_SYSTEMID} CACHE STRING "Machine SystemID")
@@ -101,7 +101,7 @@ set(GUROBI_LIBRARY_PATH "${GUROBI_HOME}/lib")
 set(GUROBI_INCLUDE_PATH "${GUROBI_HOME}/include")
 
 if(NOT WOLFRAM_INCLUDE_PATH)
-	set(WOLFRAM_INCLUDE_PATH "${MATHEMATICA_LAYOUT}/SystemFiles/IncludeFiles/C")
+	set(WOLFRAM_INCLUDE_PATH "${WOLFRAM_INSTALLATION}/SystemFiles/IncludeFiles/C")
 endif()
 
 message(STATUS "WOLFRAM_INCLUDE_PATH: ${WOLFRAM_INCLUDE_PATH}")
@@ -142,7 +142,7 @@ if(APPLE)
 	string(REGEX REPLACE "^.*:.|.$" "" GUROBI_LIB_INSTALL_NAME ${OTOOL_OUT})
 	add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 		COMMAND install_name_tool -change ${GUROBI_LIB_INSTALL_NAME} @loader_path/${GUROBI_LIB} $<TARGET_FILE_NAME:${PROJECT_NAME}>
-		COMMENT "Setting rpath for ${GUROBI_LIB}"
+		COMMENT "Setting ${PROJECT_NAME} rpath for ${GUROBI_LIB}"
 	)
 endif()
 
@@ -161,13 +161,13 @@ if(INSTALL_PDB)
 endif()
 
 configure_file(
-	${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/PacletInfo.m.in
-	${CMAKE_BINARY_DIR}/generated/PacletInfo.m
+	${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/PacletInfo.wl.in
+	${CMAKE_BINARY_DIR}/generated/PacletInfo.wl
 )
 
 set(WL_SOURCES
-	${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/${PROJECT_NAME}.m
-	${CMAKE_BINARY_DIR}/generated/PacletInfo.m
+	${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/${PROJECT_NAME}.wl
+	${CMAKE_BINARY_DIR}/generated/PacletInfo.wl
 )
 
 install(FILES ${WL_SOURCES} DESTINATION ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME})

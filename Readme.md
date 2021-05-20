@@ -12,7 +12,7 @@ cd build
 Configure the build
 ```
 cmake -G "Visual Studio 15 2017 Win64" ^
-      -DMATHEMATICA_LAYOUT="C:\Program Files\Wolfram Research\Mathematica\12.2"^
+      -DWOLFRAM_INSTALLATION="C:\Program Files\Wolfram Research\Mathematica\12.2"^
       -DINSTALL_PDB=ON ^
       ..\CSource
 ```
@@ -40,7 +40,7 @@ cd build
 ```
 Configure the build
 ```
-cmake -DMATHEMATICA_LAYOUT="/Applications/Mathematica 12.2.app/Contents" ../CSource
+cmake -DWOLFRAM_INSTALLATION="/Applications/Mathematica 12.2.app/Contents" ../CSource
 ```
 Build the debug configuration from the command line
 ```

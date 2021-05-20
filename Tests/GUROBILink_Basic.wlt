@@ -1,7 +1,7 @@
 
 Needs["GUROBILink`"]
 
-Test[
+VerificationTest[
 	GUROBITestLicense[]
 	,
 	True
@@ -9,7 +9,7 @@ Test[
 	TestID->"GUROBILink_Basic-20210519-C6Z5H7"
 ]
 
-Test[
+VerificationTest[
 	(data = GUROBIDataCreate[]) // Head
 	,
 	GUROBIData
@@ -17,7 +17,7 @@ Test[
 	TestID->"GUROBILink_Basic-20210519-C3D2B1"
 ]
 
-Test[
+VerificationTest[
 	GUROBIDataQ[data]
 	,
 	True
@@ -25,7 +25,7 @@ Test[
 	TestID->"GUROBILink_Basic-20210519-I3N7Q8"
 ]
 
-Test[
+VerificationTest[
 	GUROBISetVariableTypesAndObjectiveVector[data, {}, {1.}]
 	,
 	0
@@ -33,7 +33,7 @@ Test[
 	TestID->"GUROBILink_Basic-20210519-R4F6X5"
 ]
 
-Test[
+VerificationTest[
 	GUROBIAddLinearConstraints[data, SparseArray[{{1}}], ">", {0.}]
 	,
 	0
@@ -41,7 +41,7 @@ Test[
 	TestID->"GUROBILink_Basic-20210519-F6I2F8"
 ]
 
-Test[
+VerificationTest[
 	GUROBIOptimize[data]
 	,
 	"Solved"
@@ -49,7 +49,7 @@ Test[
 	TestID->"GUROBILink_Basic-20210519-W0L9Y9"
 ]
 
-Test[
+VerificationTest[
 	GUROBIObjectiveValue[data]
 	,
 	0.
@@ -57,7 +57,7 @@ Test[
 	TestID->"GUROBILink_Basic-20210519-D6R9J9"
 ]
 
-Test[
+VerificationTest[
 	GUROBIx[data]
 	,
 	{0.}
