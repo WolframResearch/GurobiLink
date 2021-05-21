@@ -44,7 +44,7 @@ $GUROBILinkLibrary = Block[{$LibraryPath = $targetDir}, FindLibrary["GUROBILink"
 
 $GUROBILibrariesToPreload = Switch[$SystemID,
 	"Windows-x86-64",
-		Map[Function[FileNameJoin[{$targetDir, #}]], {"GUROBI90.dll"}],
+		FileNames["gurobi*.dll", $targetDir],
 	_,
 		{}
 ]
