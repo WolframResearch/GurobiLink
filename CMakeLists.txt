@@ -9,10 +9,8 @@ project(GUROBILink)
 string(TIMESTAMP BUILD_TIME "%d %b %Y at %H:%M")
 
 set(GUROBI_VERSION "9.1.2" CACHE STRING "GUROBI version")
-string(REGEX REPLACE "([0-9]+)\\.[0-9]+\\.[0-9]+.*" "\\1" MAJ_VER ${GUROBI_VERSION})
-set(GUROBI_MAJOR_VERSION ${MAJ_VER} CACHE STRING "Gurobi major version number" FORCE)
-string(REGEX REPLACE "[0-9]+\\.([0-9]+)\\.[0-9]+.*" "\\1" MIN_VER ${GUROBI_VERSION})
-set(GUROBI_MINOR_VERSION ${MIN_VER} CACHE STRING "Gurobi major version number" FORCE)
+string(REGEX REPLACE "([0-9]+)\\.[0-9]+\\.[0-9]+.*" "\\1" GUROBI_MAJOR_VERSION ${GUROBI_VERSION})
+string(REGEX REPLACE "[0-9]+\\.([0-9]+)\\.[0-9]+.*" "\\1" GUROBI_MINOR_VERSION ${GUROBI_VERSION})
 string(REGEX REPLACE "\\." "" GUROBI_VER ${GUROBI_VERSION})
 
 set(COMPONENTS_ROOT "/Components" CACHE PATH "Components location")
