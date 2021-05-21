@@ -33,7 +33,11 @@
 
 	</target>
 
-	<target name='NativeLibrary.GUROBILink.execute' extensionOf='NativeLibrary.execute'>
+	<target name='cvs.checkout' >
+		<cvs package='Components/Gurobi/9.1.2' command='co' dest='${checkout_directory}'/>
+	</target>
+
+	<target name='NativeLibrary.GUROBILink.execute' depends='cvs.checkout' extensionOf='NativeLibrary.execute'>
 
 		<condition property='cmake.generator' value='-G &quot;${env.CMAKE_GENERATOR}&quot;' else=''>
 			<matches pattern="Windows" string="${system_id}"/>
@@ -44,11 +48,11 @@
 		
 		<re-cmake-exec dir='${library.makefiles.dir}' >
 			<arg line='-DWOLFRAM_INCLUDE_PATH=${checkout_directory}/RuntimeLibrary/${system_id}'/>
+			<arg line='-DCOMPONENTS_ROOT=${checkout_directory}/Components' />
 			<arg line='-DCMAKE_BUILD_TYPE=Release'/>
-			<arg line='-DBUILD_STUB=ON' />
 			<arg line='-DCMAKE_INSTALL_PREFIX=${install_dir}'/>
 			<arg line='${cmake.generator}'/>
-			<arg value='${checkout_directory}/GUROBILink/CSource'/>
+			<arg value='${checkout_directory}/GUROBILink'/>
 		</re-cmake-exec>
 
 		<re-cmake-exec dir='${library.makefiles.dir}' >
@@ -62,7 +66,7 @@
 
 	<target name='GUROBILink.chmod' unless='is.windows'>
 
-		<chmod dir='${install_dir}/full/${component}/LibraryResources/${system_id}' perm='u=rwx,g=rx,o=rx'>
+		<chmod dir='${install_dir}/${component}/LibraryResources/${system_id}' perm='u=rwx,g=rx,o=rx'>
 			<include name='*.dylib' />
 			<include name='*.so' />
 		</chmod>
@@ -71,7 +75,7 @@
 
 	<target name='GUROBILink.sign' unless='is.unix'>
 
-		<sign dir='${install_dir}/full'>
+		<sign dir='${install_dir}'>
 			<include name='**/*.dylib' if='is.osx' />
 			<include name='**/*.dll' if='is.windows' />
 		</sign>
@@ -81,7 +85,7 @@
 	<target name='NativeLibrary.GUROBILink.postbuild' depends='GUROBILink.chmod,GUROBILink.sign' extensionOf='NativeLibrary.postbuild'>
 
 		<copy todir='${files_directory}'>
-			<fileset dir='${install_dir}/full'>
+			<fileset dir='${install_dir}'>
 				<include name='**/**' />
 			</fileset>
 		</copy>
