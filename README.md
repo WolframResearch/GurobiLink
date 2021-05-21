@@ -9,7 +9,7 @@ quadratic programming (QP), quadratically-constrained programming (QCP) and othe
 It supports Gurobi version 9.0 and later and is bundled with Wolfram Language products (such as [Mathematica](https://www.wolfram.com/mathematica/)
 or [Wolfram Desktop](https://www.wolfram.com/desktop/)) version 12.2 and later.
 
-The package requires a Gurobi [licence](https://reference.wolfram.com/language/workflow/GetALicenseForGUROBI.html)
+The package requires a Gurobi [license](https://reference.wolfram.com/language/workflow/GetALicenseForGUROBI.html)
 and makes the solver accessible as a plug-in through the Wolfram Language 
 [optimization method framework](https://reference.wolfram.com/language/OptimizationMethodFramework/tutorial/OptimizationMethodFramework.html).
 
@@ -29,7 +29,7 @@ cd GUROBILink
 mkdir build
 cd build
 cmake <options> ..
-cmake --build .. --install
+cmake --build . --target install
 ```
 
 which will place the result by default in the `GUROBILink/build/install` directory. 
