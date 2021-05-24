@@ -173,6 +173,9 @@ EXTERN_C DLLEXPORT int GUROBIData_SetVariableTypesAndBoundsAndObjectiveVector(Wo
 	// Add objective vector and variable types
 	error = GRBaddvars(GUROBIdata->model, nvars, 0, nullptr, nullptr, nullptr, objvec, lbounds, ubounds, vartypes, nullptr);
 
+	// free stuff
+	libData->UTF8String_disown(vartypes);
+
 	// load return values
 	MArgument_setInteger(Res, (mint)error);
 
@@ -287,6 +290,7 @@ EXTERN_C DLLEXPORT int GUROBIData_AddLinearConstraint(WolframLibraryData libData
 	// free stuff
 	if (indices)
 		free(indices);
+	libData->UTF8String_disown(senseString);
 
 	// load return values
 	MArgument_setInteger(Res, (mint)error);
@@ -386,6 +390,7 @@ EXTERN_C DLLEXPORT int GUROBIData_AddLinearConstraint1(WolframLibraryData libDat
 		libData->MTensor_free(Tvec);
 	if (indices)
 		free(indices);
+	libData->UTF8String_disown(senseString);
 
 	// load return values
 	MArgument_setInteger(Res, (mint)error);
@@ -473,6 +478,7 @@ EXTERN_C DLLEXPORT int GUROBIData_AddLinearConstraints(WolframLibraryData libDat
 		free(Ai);
 	if (sensevec)
 		free(sensevec);
+	libData->UTF8String_disown(senseString);
 
 	// load return values
 	MArgument_setInteger(Res, (mint)error);
@@ -555,6 +561,7 @@ EXTERN_C DLLEXPORT int GUROBIData_AddQuadraticConstraint(WolframLibraryData libD
 		free(quadrow);
 	if (quadcol)
 		free(quadcol);
+	libData->UTF8String_disown(senseString);
 
 	// load return values
 	MArgument_setInteger(Res, (mint)error);
@@ -634,6 +641,7 @@ EXTERN_C DLLEXPORT int GUROBIData_AddQuadraticConstraint1(WolframLibraryData lib
 		free(quadrow);
 	if (quadcol)
 		free(quadcol);
+	libData->UTF8String_disown(senseString);
 
 	// load return values
 	MArgument_setInteger(Res, (mint)error);
