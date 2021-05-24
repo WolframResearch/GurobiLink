@@ -67,16 +67,16 @@ Block[{$LibraryPath = $targetDir},
 	Map[LibraryLoad, $GUROBILibrariesToPreload];
 	GUROBICheckLicense0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_CheckLicense", {Integer}, Integer];
 	GUROBICheckModel0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_CheckModel", {Integer}, Integer];
-	GUROBISetVariableTypesAndObjectiveVector0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetVariableTypesAndObjectiveVector", {Integer, {Integer, 1}, {Real, 1}}, Integer];
-	GUROBISetVariableTypesAndBoundsAndObjectiveVector0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetVariableTypesAndBoundsAndObjectiveVector", {Integer, UTF8String, {Real, 1}, {Real, 1}, {Real, 1}}, Integer];
+	GUROBISetVariableTypesAndObjectiveVector0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetVariableTypesAndObjectiveVector", {Integer, {Integer, 1}, {Real, 1, "Constant"}}, Integer];
+	GUROBISetVariableTypesAndBoundsAndObjectiveVector0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetVariableTypesAndBoundsAndObjectiveVector", {Integer, UTF8String, {Real, 1, "Constant"}, {Real, 1, "Constant"}, {Real, 1, "Constant"}}, Integer];
 	GUROBIAddQuadraticObjectiveMatrix0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddQuadraticObjectiveMatrix", {Integer, LibraryDataType[SparseArray, Real, 2]}, Integer];
-	GUROBIAddLinearConstraint0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddLinearConstraint", {Integer, {Integer, 1}, {Real, 1}, UTF8String, Real}, Integer];
+	GUROBIAddLinearConstraint0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddLinearConstraint", {Integer, {Integer, 1}, {Real, 1, "Constant"}, UTF8String, Real}, Integer];
 	GUROBIAddLinearConstraint1 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddLinearConstraint1", {Integer, LibraryDataType[SparseArray, Real, 1], UTF8String, Real}, Integer];
-	GUROBIAddLinearConstraints0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddLinearConstraints", {Integer, LibraryDataType[SparseArray, Real, 2], UTF8String, {Real, 1}}, Integer];
-	GUROBIAddQuadraticConstraint0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddQuadraticConstraint", {Integer, {Integer, 1}, {Real, 1}, {Integer, 1}, {Integer, 1}, {Real, 1}, UTF8String, Real}, Integer];
+	GUROBIAddLinearConstraints0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddLinearConstraints", {Integer, LibraryDataType[SparseArray, Real, 2], UTF8String, {Real, 1, "Constant"}}, Integer];
+	GUROBIAddQuadraticConstraint0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddQuadraticConstraint", {Integer, {Integer, 1}, {Real, 1, "Constant"}, {Integer, 1}, {Integer, 1}, {Real, 1, "Constant"}, UTF8String, Real}, Integer];
 	GUROBIAddQuadraticConstraint1 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddQuadraticConstraint1", {Integer, LibraryDataType[SparseArray, Real, 2], LibraryDataType[SparseArray, Real, 1], UTF8String, Real}, Integer];
 	GUROBISetParameters0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetParameters", {Integer, Integer, Real, Integer}, Integer];
-	GUROBISetStartingPoint0 =  LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetStartingPoint", {Integer, {Real, 1}}, Integer];
+	GUROBISetStartingPoint0 =  LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetStartingPoint", {Integer, {Real, 1, "Constant"}}, Integer];
 
 	GUROBIOptimize0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_OptimizeModel", {Integer}, Integer];
 
@@ -250,25 +250,25 @@ Module[{QGmat = Qmat/2},
 	GUROBIAddQuadraticObjectiveMatrix0[id, QGmat]
 ];
 
-GUROBIAddLinearConstraintIndices[GUROBIData[id_]?(testGUROBIData[GUROBIDataDelete]), indices_, values_, sense_, rhs_]:=
+GUROBIAddLinearConstraintIndices[GUROBIData[id_]?(testGUROBIData[GUROBIAddLinearConstraintIndices]), indices_, values_, sense_, rhs_]:=
 Module[{},
 	GUROBIAddLinearConstraint0[id, indices, values, sense, rhs]
 ];
 
-GUROBIAddLinearConstraint[GUROBIData[id_]?(testGUROBIData[GUROBIDataDelete]), vector_SparseArray, sense_, rhs_]:=
+GUROBIAddLinearConstraint[GUROBIData[id_]?(testGUROBIData[GUROBIAddLinearConstraint]), vector_SparseArray, sense_, rhs_]:=
 Module[{},
 	GUROBIAddLinearConstraint1[id, vector, sense, rhs]
 ];
 
-GUROBIAddLinearConstraints[GUROBIData[id_]?(testGUROBIData[GUROBIDataDelete]), mat_SparseArray, sense_, rhs_]:=
+GUROBIAddLinearConstraints[GUROBIData[id_]?(testGUROBIData[GUROBIAddLinearConstraints]), mat_SparseArray, sense_, rhs_]:=
 Module[{},
 	dPrint[5, xGUROBIAddLinearConstraints0[id, mat, sense, rhs]];
 	GUROBIAddLinearConstraints0[id, SparseArray[mat], sense, Normal[rhs]]
 ];
 
-GUROBIAddQuadraticConstraintIndices[GUROBIData[id_]?(testGUROBIData[GUROBIAddQuadraticConstraint]), linind_, linvals_, quadrow_, quadcol_, quadvals_, sense_, rhs_] :=
+GUROBIAddQuadraticConstraintIndices[GUROBIData[id_]?(testGUROBIData[GUROBIAddQuadraticConstraintIndices]), linind_, linvals_, quadrow_, quadcol_, quadvals_, sense_, rhs_] :=
 Module[{},
-	GUROBIAddQuadraticConstraint0[data, linind, linvals, quadrow, quadcol, quadvals, sense, rhs]
+	GUROBIAddQuadraticConstraint0[id, linind, linvals, quadrow, quadcol, quadvals, sense, rhs]
 ]
 
 GUROBIAddQuadraticConstraint[GUROBIData[id_]?(testGUROBIData[GUROBIAddQuadraticOptimizationConstraint]), Q_SparseArray, q_SparseArray, sense_, b_] :=
@@ -295,7 +295,7 @@ Module[{n, linind, linvals, quadrow, quadcol, quadvals, sense, rhs},
   	GUROBIAddQuadraticConstraint0[id, linind, linvals, quadrow, quadcol, quadvals, sense, rhs]
 ]
 
-GUROBIAddSOCAffineConstraint[GUROBIData[id_]?(testGUROBIData[GUROBIAddSOCConstraintAsQuadratic]), A_, b_]:=
+GUROBIAddSOCAffineConstraint[GUROBIData[id_]?(testGUROBIData[GUROBIAddSOCAffineConstraint]), A_, b_]:=
 Module[{n, Q, q, b1, psd},
 	(* This is only accepted for SOC constraint for diagonal A, with non-diagonal A
 	one may try to set the "NonConvex" parameter to 2 but this should not be very efficient *)
