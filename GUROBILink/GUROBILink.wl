@@ -69,12 +69,12 @@ Block[{$LibraryPath = $targetDir},
 	GUROBICheckModel0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_CheckModel", {Integer}, Integer];
 	GUROBISetVariableTypesAndObjectiveVector0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetVariableTypesAndObjectiveVector", {Integer, {Integer, 1}, {Real, 1, "Constant"}}, Integer];
 	GUROBISetVariableTypesAndBoundsAndObjectiveVector0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetVariableTypesAndBoundsAndObjectiveVector", {Integer, UTF8String, {Real, 1, "Constant"}, {Real, 1, "Constant"}, {Real, 1, "Constant"}}, Integer];
-	GUROBIAddQuadraticObjectiveMatrix0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddQuadraticObjectiveMatrix", {Integer, LibraryDataType[SparseArray, Real, 2]}, Integer];
+	GUROBIAddQuadraticObjectiveMatrix0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddQuadraticObjectiveMatrix", {Integer, {LibraryDataType[SparseArray, Real, 2], "Constant"}}, Integer];
 	GUROBIAddLinearConstraint0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddLinearConstraint", {Integer, {Integer, 1}, {Real, 1, "Constant"}, UTF8String, Real}, Integer];
-	GUROBIAddLinearConstraint1 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddLinearConstraint1", {Integer, LibraryDataType[SparseArray, Real, 1], UTF8String, Real}, Integer];
-	GUROBIAddLinearConstraints0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddLinearConstraints", {Integer, LibraryDataType[SparseArray, Real, 2], UTF8String, {Real, 1, "Constant"}}, Integer];
+	GUROBIAddLinearConstraint1 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddLinearConstraint1", {Integer, {LibraryDataType[SparseArray, Real, 1], "Constant"}, UTF8String, Real}, Integer];
+	GUROBIAddLinearConstraints0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddLinearConstraints", {Integer, {LibraryDataType[SparseArray, Real, 2], "Constant"}, UTF8String, {Real, 1, "Constant"}}, Integer];
 	GUROBIAddQuadraticConstraint0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddQuadraticConstraint", {Integer, {Integer, 1}, {Real, 1, "Constant"}, {Integer, 1}, {Integer, 1}, {Real, 1, "Constant"}, UTF8String, Real}, Integer];
-	GUROBIAddQuadraticConstraint1 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddQuadraticConstraint1", {Integer, LibraryDataType[SparseArray, Real, 2], LibraryDataType[SparseArray, Real, 1], UTF8String, Real}, Integer];
+	GUROBIAddQuadraticConstraint1 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_AddQuadraticConstraint1", {Integer, {LibraryDataType[SparseArray, Real, 2], "Constant"}, {LibraryDataType[SparseArray, Real, 1], "Constant"}, UTF8String, Real}, Integer];
 	GUROBISetParameters0 = LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetParameters", {Integer, Integer, Real, Integer}, Integer];
 	GUROBISetStartingPoint0 =  LibraryFunctionLoad[$GUROBILinkLibrary, "GUROBIData_SetStartingPoint", {Integer, {Real, 1, "Constant"}}, Integer];
 
