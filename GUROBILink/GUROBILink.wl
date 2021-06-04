@@ -184,6 +184,7 @@ Optimization`MethodFramework`RegisterOptimizationMethod["GUROBI",
 	]
 ];
 
+Optimization`MethodFramework`RegisterOptimizationMethodAliases["GUROBI", {"Gurobi"}];
 
 (* GUROBIData expression (GUROBISolMap) related: *)
 
