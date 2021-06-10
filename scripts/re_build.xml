@@ -1,4 +1,4 @@
-<project name='GUROBILink' basedir='..'>
+<project name='GurobiLink' basedir='..'>
 
 	<property name='component' value='${ant.project.name}'/>
 	<property name='build_type' value='Release'/>
@@ -15,7 +15,7 @@
 		Native libraries
 	-->
 
-	<target name='NativeLibrary.GUROBILink.init.custom' extensionOf='NativeLibrary.init.custom'>
+	<target name='NativeLibrary.GurobiLink.init.custom' extensionOf='NativeLibrary.init.custom'>
 
 
 		<!--
@@ -27,7 +27,7 @@
 
 	</target>
 
-	<target name='NativeLibrary.GUROBILink.clean' extensionOf='NativeLibrary.clean'>
+	<target name='NativeLibrary.GurobiLink.clean' extensionOf='NativeLibrary.clean'>
 
 		<delete dir='${library.makefiles.dir}'/>
 
@@ -37,7 +37,7 @@
 		<cvs package='Components/Gurobi/9.1.2' command='co' dest='${checkout_directory}'/>
 	</target>
 
-	<target name='NativeLibrary.GUROBILink.execute' depends='cvs.checkout' extensionOf='NativeLibrary.execute'>
+	<target name='NativeLibrary.GurobiLink.execute' depends='cvs.checkout' extensionOf='NativeLibrary.execute'>
 
 		<condition property='cmake.generator' value='-G &quot;${env.CMAKE_GENERATOR}&quot;' else=''>
 			<matches pattern="Windows" string="${system_id}"/>
@@ -52,7 +52,7 @@
 			<arg line='-DCMAKE_BUILD_TYPE=Release'/>
 			<arg line='-DCMAKE_INSTALL_PREFIX=${install_dir}'/>
 			<arg line='${cmake.generator}'/>
-			<arg value='${checkout_directory}/GUROBILink'/>
+			<arg value='${checkout_directory}/GurobiLink'/>
 		</re-cmake-exec>
 
 		<re-cmake-exec dir='${library.makefiles.dir}' >
@@ -64,7 +64,7 @@
 
 	</target>
 
-	<target name='GUROBILink.chmod' unless='is.windows'>
+	<target name='GurobiLink.chmod' unless='is.windows'>
 
 		<chmod dir='${install_dir}/${component}/LibraryResources/${system_id}' perm='u=rwx,g=rx,o=rx'>
 			<include name='*.dylib' />
@@ -73,7 +73,7 @@
 
 	</target>
 
-	<target name='GUROBILink.sign' unless='is.unix'>
+	<target name='GurobiLink.sign' unless='is.unix'>
 
 		<sign dir='${install_dir}'>
 			<include name='**/*.dylib' if='is.osx' />
@@ -82,7 +82,7 @@
 
 	</target>
 	
-	<target name='NativeLibrary.GUROBILink.postbuild' depends='GUROBILink.chmod,GUROBILink.sign' extensionOf='NativeLibrary.postbuild'>
+	<target name='NativeLibrary.GurobiLink.postbuild' depends='GurobiLink.chmod,GurobiLink.sign' extensionOf='NativeLibrary.postbuild'>
 
 		<copy todir='${files_directory}'>
 			<fileset dir='${install_dir}'>

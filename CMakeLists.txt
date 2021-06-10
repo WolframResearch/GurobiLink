@@ -4,11 +4,11 @@ if(POLICY CMP0091)
 	cmake_policy(SET CMP0091 NEW)
 endif()
 
-project(GUROBILink)
+project(GurobiLink)
 
 string(TIMESTAMP BUILD_TIME "%d %b %Y at %H:%M")
 
-set(GUROBI_VERSION "9.1.2" CACHE STRING "GUROBI version")
+set(GUROBI_VERSION "9.1.2" CACHE STRING "Gurobi version")
 string(REGEX REPLACE "([0-9]+)\\.[0-9]+\\.[0-9]+.*" "\\1" GUROBI_MAJOR_VERSION ${GUROBI_VERSION})
 string(REGEX REPLACE "[0-9]+\\.([0-9]+)\\.[0-9]+.*" "\\1" GUROBI_MINOR_VERSION ${GUROBI_VERSION})
 string(REGEX REPLACE "\\." "" GUROBI_VER ${GUROBI_VERSION})
@@ -111,8 +111,8 @@ find_file(WOLFRAM_LIBRARY_HEADER "WolframLibrary.h" PATHS ${WOLFRAM_INCLUDE_PATH
 find_file(GUROBI_LIBRARY ${GUROBI_LIB} PATHS ${GUROBI_LIBRARY_PATH} REQUIRED NO_DEFAULT_PATH)
 
 set(GUROBILINK_SOURCES
-	CSource/GUROBILink.cpp
-	CSource/GUROBISolution.cpp
+	CSource/GurobiLink.cpp
+	CSource/GurobiSolution.cpp
 )
 
 set(PACLET_DESTINATION ${CMAKE_INSTALL_PREFIX}/${FULL} CACHE PATH "Full build destination")

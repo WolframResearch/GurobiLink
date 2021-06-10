@@ -1,7 +1,7 @@
 
-# GUROBILink for Wolfram Language
+# GurobiLink for Wolfram Language
 
-GUROBILink is a package implemented in [Wolfram Language](https://www.wolfram.com/language/) and C++
+GurobiLink is a package implemented in [Wolfram Language](https://www.wolfram.com/language/) and C++
 using [LibraryLink](https://reference.wolfram.com/language/guide/LibraryLink.html) that provides an interface
 to the [Gurobi](https://www.gurobi.com/) numerical optimization solver for continuous and mixed-integer linear programming (LP),
 quadratic programming (QP), quadratically-constrained programming (QCP) and other classes of problems.
@@ -9,11 +9,11 @@ quadratic programming (QP), quadratically-constrained programming (QCP) and othe
 It supports Gurobi version 9.0 and later and is bundled with Wolfram Language products (such as [Mathematica](https://www.wolfram.com/mathematica/)
 or [Wolfram Desktop](https://www.wolfram.com/desktop/)) version 12.2 and later.
 
-The package requires a Gurobi [license](https://reference.wolfram.com/language/workflow/GetALicenseForGUROBI.html)
+The package requires a Gurobi [license](https://reference.wolfram.com/language/workflow/GetALicenseForGurobi.html)
 and makes the solver accessible as a plug-in through the Wolfram Language 
 [optimization method framework](https://reference.wolfram.com/language/OptimizationMethodFramework/tutorial/OptimizationMethodFramework.html).
 
-It is used to implement `Method -> "GUROBI"` in functons like [`NMinimize`](https://reference.wolfram.com/language/ref/NMinimize.html) or
+It is used to implement `Method -> "Gurobi"` in functons like [`NMinimize`](https://reference.wolfram.com/language/ref/NMinimize.html) or
 [`ConvexOptimization`](https://reference.wolfram.com/language/ref/ConvexOptimization.html).
 
 ## How to build
@@ -24,15 +24,15 @@ as installations of Wolfram Language and Gurobi.
 The general steps for building the complete paclet are
 
 ```
-git clone <repository url> GUROBILink
-cd GUROBILink
+git clone <repository url> GurobiLink
+cd GurobiLink
 mkdir build
 cd build
 cmake <options> ..
 cmake --build . --target install
 ```
 
-which will place the result by default in the `GUROBILink/build/install` directory. 
+which will place the result by default in the `GurobiLink/build/install` directory. 
 
 The typical options required for building are 
 
@@ -54,9 +54,9 @@ Some platform-specific examples follow:
 
 #### Windows
 
-Create a build directory, e.g. `C:\dev\git\Paclets\GUROBILink\build`
+Create a build directory, e.g. `C:\dev\git\Paclets\GurobiLink\build`
 ```
-cd C:\dev\git\Paclets\GUROBILink
+cd C:\dev\git\Paclets\GurobiLink
 mkdir build
 cd build
 ```
@@ -81,19 +81,19 @@ The development version of the paclet will be assembled in `build\install` and c
 Wolfram Language session by
 
 ```
-PacletDirectoryLoad["C:\\dev\\git\\Paclets\\GUROBILink\\build\\install\\GUROBILink"];
+PacletDirectoryLoad["C:\\dev\\git\\Paclets\\GurobiLink\\build\\install\\GurobiLink"];
 ```
 Sanity-check the build by running the included basic test file:
 
 ```
-TestReport["C:\\dev\\git\\Paclets\\GUROBILink\\Tests\\GUROBILink_Basic.wlt"]
+TestReport["C:\\dev\\git\\Paclets\\GurobiLink\\Tests\\GurobiLink_Basic.wlt"]
 ```
 
 #### macOS
 
-Create a build directory, e.g. `~/git/Paclets/GUROBILink/build`
+Create a build directory, e.g. `~/git/Paclets/GurobiLink/build`
 ```
-cd ~/git/Paclets/GUROBILink
+cd ~/git/Paclets/GurobiLink
 mkdir build
 cd build
 ```
@@ -112,14 +112,14 @@ The development version of the paclet will be assembled in `build/install` and c
 session by
 
 ```
-PacletDirectoryLoad["~/git/Paclets/GUROBILink/build/install/GUROBILink"];
+PacletDirectoryLoad["~/git/Paclets/GurobiLink/build/install/GurobiLink"];
 ```
 Sanity-check the build by running the included basic test file:
 
 ```
-TestReport["~/git/Paclets/GUROBILink/Tests/GUROBILink_Basic.wlt"]
+TestReport["~/git/Paclets/GurobiLink/Tests/GurobiLink_Basic.wlt"]
 ```
 
 ### See also 
- * [LICENSE](LICENSE) - GUROBILink license
- * [CONTRIBUTING.md](CONTRIBUTING.md) - Guidelines for contributing to GUROBILink
+ * [LICENSE](LICENSE) - GurobiLink license
+ * [CONTRIBUTING.md](CONTRIBUTING.md) - Guidelines for contributing to GurobiLink
