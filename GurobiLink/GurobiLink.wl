@@ -149,6 +149,11 @@ Module[{error},
 
 GurobiLink::license = "Cannot find a valid Gurobi license for version 9.0 or greater."
 
+(* Options *)
+Options[GurobiOptimize] = {Method->Automatic, MaxIterations->Automatic, Tolerance->Automatic,
+"NonConvex"->Automatic, "StartingPoint"->Automatic, "Caller"-> Automatic,
+	PerformanceGoal:>$PerformanceGoal, WorkingPrecision->MachinePrecision}
+
 (* Check for license, just once *)
 GurobiTestLicense[] :=
 	(GurobiTestLicense[] = TrueQ[GurobiCheckLicense[env]])
@@ -166,7 +171,8 @@ Optimization`MethodFramework`RegisterOptimizationMethod["Gurobi1",
 		"ObjectiveSupport" -> "Quadratic",
 		"ConstraintSupport" -> Association[{"EqualityConstraint" -> "Affine", "NonNegativeCone" -> "Affine",
 		"NormCone" -> "Affine", "QuadraticConstraint" -> "Affine"}],
-		"MixedIntegerSupport"->True,
+		"MixedIntegerSupport" -> True,
+		"MethodOptions" -> Options[GurobiOptimize],
 		"License"->licenseData
 	]
 ];
@@ -179,7 +185,8 @@ Optimization`MethodFramework`RegisterOptimizationMethod["Gurobi",
 		"ObjectiveSupport" -> "Quadratic",
 		"ConstraintSupport" -> Association[{"EqualityConstraint"->"Affine", "NonNegativeCone"->"Affine",
 		"NormCone"->"Membership", "QuadraticConstraint" -> "Affine"}],
-		"MixedIntegerSupport"->True,
+		"MixedIntegerSupport" -> True,
+		"MethodOptions" -> Options[GurobiOptimize],
 		"License"->licenseData
 	]
 ];
@@ -339,10 +346,6 @@ Module[{error},
 (* Function to solve the problem *)
 
 INTMAX = 2^31-1;
-
-Options[GurobiOptimize] = {Method->Automatic, MaxIterations->Automatic, Tolerance->Automatic,
-"NonConvex"->Automatic, "StartingPoint"->Automatic, "Caller"-> Automatic,
-	PerformanceGoal:>$PerformanceGoal, WorkingPrecision->MachinePrecision}
 
 GurobiOptimize[GurobiData[id_]?(testGurobiData[GurobiOptimize]), OptionsPattern[GurobiOptimize]] :=
 Module[{tol, maxiter, nonconvex, mhead, verbose, status, error, startpt, data=GurobiData[id]},
