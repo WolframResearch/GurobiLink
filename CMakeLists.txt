@@ -18,7 +18,7 @@ mark_as_advanced(COMPONENTS_ROOT)
 
 set(INSTALL_PDB OFF CACHE BOOL "Include PDB file in paclet layout")
 
-set(PACLET_VERSION 1.0.2 CACHE STRING "Paclet version")
+set(PACLET_VERSION 1.0.3 CACHE STRING "Paclet version")
 set(TARGET_WOLFRAM_VERSION 12.3+ CACHE STRING "Target Wolfram version")
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
