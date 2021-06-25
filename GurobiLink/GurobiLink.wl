@@ -172,7 +172,7 @@ Optimization`MethodFramework`RegisterOptimizationMethod["Gurobi1",
 		"ConstraintSupport" -> Association[{"EqualityConstraint" -> "Affine", "NonNegativeCone" -> "Affine",
 		"NormCone" -> "Affine", "QuadraticConstraint" -> "Affine"}],
 		"MixedIntegerSupport" -> True,
-		"MethodOptions" -> Options[GurobiOptimize],
+		"ExtraOptions" -> Optimization`MethodFramework`GetExtraOptions[Options[GurobiOptimize]],
 		"License"->licenseData
 	]
 ];
@@ -186,7 +186,7 @@ Optimization`MethodFramework`RegisterOptimizationMethod["Gurobi",
 		"ConstraintSupport" -> Association[{"EqualityConstraint"->"Affine", "NonNegativeCone"->"Affine",
 		"NormCone"->"Membership", "QuadraticConstraint" -> "Affine"}],
 		"MixedIntegerSupport" -> True,
-		"MethodOptions" -> Options[GurobiOptimize],
+		"ExtraOptions" -> Optimization`MethodFramework`GetExtraOptions[Options[GurobiOptimize]],
 		"License"->licenseData
 	]
 ];
