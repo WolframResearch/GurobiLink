@@ -117,7 +117,7 @@ other possible CMake generators)
 ```
 cmake -DWOLFRAM_INSTALLATION="/Applications/Mathematica12.3.app/Contents" \
       -DGUROBI_VERSION=9.1.2 \
-      -DGUROBI_HOME=/Library/gurobi912/mac64
+      -DGUROBI_HOME=/Library/gurobi912/mac64 \
       ..
 ```
 Build the debug configuration from the command line
@@ -134,6 +134,17 @@ Sanity-check the build by running the included basic test file:
 
 ```
 TestReport["~/git/Paclets/GurobiLink/Tests/GurobiLink_Basic.wlt"]
+```
+
+#### Linux
+
+See the macOS instructions, except the build configuration step would be
+
+```
+cmake -DWOLFRAM_INSTALLATION="/usr/local/Wolfram/Mathematica/12.3" \
+      -DGUROBI_VERSION=9.1.2 \
+      -DGUROBI_HOME=/opt/gurobi912/linux64 \
+      ..
 ```
 
 ### See also 
