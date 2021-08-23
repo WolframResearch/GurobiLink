@@ -652,17 +652,17 @@ EXTERN_C DLLEXPORT int GurobiData_AddQuadraticConstraint1(WolframLibraryData lib
 /************************************************************************/
 /*                GurobiData_SetParameters                              */
 /*                                                                      */
-/*        GurobiSetParameters[data, maxit, tol, nonconvex]              */
+/*        GurobiSetParameters[data, maxit, tol, nonconvex, threads]     */
 /************************************************************************/
 
 EXTERN_C DLLEXPORT int GurobiData_SetParameters(WolframLibraryData libData, mint Argc, MArgument* Args, MArgument Res)
 {
-	int error, maxit, nonconvex;
+	int error, maxit, nonconvex, threads;
 	mint dataID;
 	double tol;
 	GurobiData Gurobidata;
 
-	if (Argc != 4)
+	if (Argc != 5)
 	{
 		return LIBRARY_FUNCTION_ERROR;
 	}
@@ -688,6 +688,11 @@ EXTERN_C DLLEXPORT int GurobiData_SetParameters(WolframLibraryData libData, mint
 
 	nonconvex = (int)MArgument_getInteger(Args[3]);
 	error = GRBsetintparam(GRBgetenv(Gurobidata->model), "NonConvex", nonconvex);
+	if (error)
+		return LIBRARY_FUNCTION_ERROR;
+
+	threads = (int)MArgument_getInteger(Args[4]);
+	error = GRBsetintparam(GRBgetenv(Gurobidata->model), "Threads", threads);
 	if (error)
 		return LIBRARY_FUNCTION_ERROR;
 

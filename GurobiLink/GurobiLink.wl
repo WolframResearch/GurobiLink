@@ -75,7 +75,7 @@ Block[{$LibraryPath = $targetDir},
 	GurobiAddLinearConstraints0 = LibraryFunctionLoad[$GurobiLinkLibrary, "GurobiData_AddLinearConstraints", {Integer, {LibraryDataType[SparseArray, Real, 2], "Constant"}, UTF8String, {Real, 1, "Constant"}}, Integer];
 	GurobiAddQuadraticConstraint0 = LibraryFunctionLoad[$GurobiLinkLibrary, "GurobiData_AddQuadraticConstraint", {Integer, {Integer, 1}, {Real, 1, "Constant"}, {Integer, 1}, {Integer, 1}, {Real, 1, "Constant"}, UTF8String, Real}, Integer];
 	GurobiAddQuadraticConstraint1 = LibraryFunctionLoad[$GurobiLinkLibrary, "GurobiData_AddQuadraticConstraint1", {Integer, {LibraryDataType[SparseArray, Real, 2], "Constant"}, {LibraryDataType[SparseArray, Real, 1], "Constant"}, UTF8String, Real}, Integer];
-	GurobiSetParameters0 = LibraryFunctionLoad[$GurobiLinkLibrary, "GurobiData_SetParameters", {Integer, Integer, Real, Integer}, Integer];
+	GurobiSetParameters0 = LibraryFunctionLoad[$GurobiLinkLibrary, "GurobiData_SetParameters", {Integer, Integer, Real, Integer, Integer}, Integer];
 	GurobiSetStartingPoint0 =  LibraryFunctionLoad[$GurobiLinkLibrary, "GurobiData_SetStartingPoint", {Integer, {Real, 1, "Constant"}}, Integer];
 
 	GurobiOptimize0 = LibraryFunctionLoad[$GurobiLinkLibrary, "GurobiData_OptimizeModel", {Integer}, Integer];
@@ -151,7 +151,7 @@ GurobiLink::license = "Cannot find a valid Gurobi license for version 9.0 or gre
 
 (* Options *)
 Options[GurobiOptimize] = {Method->Automatic, MaxIterations->Automatic, Tolerance->Automatic,
-"NonConvex"->Automatic, "StartingPoint"->Automatic, "Caller"-> Automatic,
+"NonConvex"->Automatic, "StartingPoint"->Automatic, "Caller"-> Automatic, "Threads"->Automatic,
 	PerformanceGoal:>$PerformanceGoal, WorkingPrecision->MachinePrecision}
 
 (* Check for license, just once *)
@@ -333,9 +333,9 @@ Module[{n, Q, q, b1, psd},
 GurobiLink::badmethod = "Method \"Gurobi1\" is not suitable for general affine SOC constraints. \
 Use method \"Gurobi\"."
 
-GurobiSetParameters[GurobiData[id_]?(testGurobiData[GurobiSetParameters]), maxit_, tol_, nonconvex_]:=
+GurobiSetParameters[GurobiData[id_]?(testGurobiData[GurobiSetParameters]), maxit_, tol_, nonconvex_, threads_]:=
 Module[{error},
-	error = GurobiSetParameters0[id, maxit, tol, nonconvex]
+	error = GurobiSetParameters0[id, maxit, tol, nonconvex, threads]
 ]
 
 GurobiSetStartingPoint[GurobiData[id_]?(testGurobiData[GurobiSetStartingPoint]), startpt_]:=
@@ -348,13 +348,14 @@ Module[{error},
 INTMAX = 2^31-1;
 
 GurobiOptimize[GurobiData[id_]?(testGurobiData[GurobiOptimize]), OptionsPattern[GurobiOptimize]] :=
-Module[{tol, maxiter, nonconvex, mhead, verbose, status, error, startpt, data=GurobiData[id]},
+Module[{tol, maxiter, nonconvex, mhead, verbose, status, error, startpt, threads, data=GurobiData[id]},
 	dPrint[3, "In GurobiOptimize"];
 	tol = OptionValue[Tolerance]; 
 	maxiter = OptionValue[MaxIterations];
 	nonconvex = OptionValue["NonConvex"];
 	mhead = OptionValue["Caller"];
 	startpt = OptionValue["StartingPoint"];
+	threads = OptionValue["Threads"];
 	If[SameQ[tol, Automatic], tol = 10.^-6, tol = N[tol]];
 	If[SameQ[maxiter, Automatic], maxiter = 1000, If[SameQ[maxiter, Infinity], maxiter = MAXINT]];
 	If[TrueQ[nonconvex] || SameQ[nonconvex, 2], nonconvex = 2, nonconvex = 1];
@@ -363,9 +364,12 @@ Module[{tol, maxiter, nonconvex, mhead, verbose, status, error, startpt, data=Gu
 		dPrint[3, "Setting starting point ", startpt];
 		error = GurobiSetStartingPoint0[id, N[startpt]];
 	];
+	If[SameQ[threads, Automatic],
+		threads = Lookup[Lookup[SystemOptions["ParallelOptions"], "ParallelOptions"], "ParallelThreadNumber", 0]
+	];
 
 	dPrint[3, "Setting parameters {maxiter, tol, nonconvex} -> ", {maxiter, tol, nonconvex}];
-	error = GurobiSetParameters0[id, maxiter, tol, nonconvex];
+	error = GurobiSetParameters0[id, maxiter, tol, nonconvex, threads];
 
 	dPrint[1, "Solving with Gurobi..."];
 	pReset[5];
