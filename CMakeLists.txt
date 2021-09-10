@@ -139,7 +139,7 @@ if(APPLE)
 	)
 	string(REGEX REPLACE "^.*:.|.$" "" GUROBI_LIB_INSTALL_NAME ${OTOOL_OUT})
 	add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-		COMMAND install_name_tool -change ${GUROBI_LIB_INSTALL_NAME} @loader_path/${GUROBI_LIB} $<TARGET_FILE_NAME:${PROJECT_NAME}>
+		COMMAND install_name_tool -change ${GUROBI_LIB_INSTALL_NAME} @loader_path/${GUROBI_LIB} $<TARGET_FILE:${PROJECT_NAME}>
 		COMMENT "Setting ${PROJECT_NAME} rpath for ${GUROBI_LIB}"
 	)
 endif()
